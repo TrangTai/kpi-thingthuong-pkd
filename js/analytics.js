@@ -262,9 +262,10 @@ function _chartN1(results) {
 
 // ── 5: Theo Miền — inline bars ───────────────────────────────
 function _renderMien(results) {
-  const miens = [...new Set(results.map(r => r.mien).filter(Boolean))];
+  const tdvOnly = results.filter(r => !r.isQLBH);
+  const miens = [...new Set(tdvOnly.map(r => r.mien).filter(Boolean))];
   const rows  = miens.map(m => {
-    const grp    = results.filter(r => r.mien === m);
+    const grp    = tdvOnly.filter(r => r.mien === m);
     const thuc   = grp.reduce((s, r) => s + (r.dsTong || 0), 0);
     const target = grp.reduce((s, r) => s + (r.dsTongTarget || 0), 0);
     const ratio  = target > 0 ? thuc / target : 0;
