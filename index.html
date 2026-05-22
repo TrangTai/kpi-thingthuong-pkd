@@ -1,0 +1,197 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KPI Tính Thưởng PKD</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- Header -->
+<header class="app-header">
+  <img class="app-logo" src="data:image/png;base64,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" alt="M">
+  <div>
+    <h1>KPI TÍNH THƯỞNG - PHÒNG KINH DOANH</h1>
+    <div class="subtitle">Import dữ liệu → Tự động tính ĐPKH · ĐPMH · PTML · HSHT</div>
+  </div>
+</header>
+
+<!-- Upload Section -->
+<section class="upload-section">
+  <div class="upload-section-title">
+    <h2>Import dữ liệu</h2>
+    <span class="upload-hint">💾 = đã lưu phiên trước · Upload lại khi có file mới · 👁 = xem dữ liệu</span>
+  </div>
+  <div class="upload-grid">
+
+    <div class="upload-card upload-card-main">
+      <input type="file" id="input-don-hang" accept=".xlsx,.xls">
+      <div class="badge badge-pending" id="badge-don-hang">!</div>
+      <div class="upload-icon">📋</div>
+      <div class="upload-title">ĐƠN HÀNG <span class="required">*</span></div>
+      <div class="upload-desc">File đơn hàng tháng<br><small>Tự lưu · Upload khi có file mới</small></div>
+      <div class="upload-label" id="label-don-hang">Chưa chọn file...</div>
+    </div>
+
+    <div class="upload-card">
+      <input type="file" id="input-dh-lon" accept=".xlsx,.xls">
+      <div class="badge badge-pending" id="badge-dh-lon">○</div>
+      <div class="upload-icon">🔄</div>
+      <div class="upload-title">ĐH LỘN</div>
+      <div class="upload-desc">Đơn hàng sai/điều chỉnh<br><small>Tự lưu, chỉ đổi khi cần</small></div>
+      <div class="upload-label" id="label-dh-lon">Không bắt buộc</div>
+    </div>
+
+    <div class="upload-card">
+      <input type="file" id="input-target" accept=".xlsx,.xls">
+      <div class="badge badge-pending" id="badge-target">!</div>
+      <div class="upload-icon">🎯</div>
+      <div class="upload-title">TARGET <span class="required">*</span></div>
+      <div class="upload-desc">File kế hoạch TDV/QLBH<br><small>Tự lưu, chỉ đổi khi cần</small></div>
+      <div class="upload-label" id="label-target">Chưa chọn file...</div>
+    </div>
+
+    <div class="upload-card">
+      <input type="file" id="input-bang-gia" accept=".xlsx,.xls">
+      <div class="badge badge-pending" id="badge-bang-gia">○</div>
+      <div class="upload-icon">💰</div>
+      <div class="upload-title">BẢNG GIÁ</div>
+      <div class="upload-desc">Mã SP → Nhóm tính lương + Nhóm PTML<br><small>Tự lưu, chỉ đổi khi cần</small></div>
+      <div class="upload-label" id="label-bang-gia">Không bắt buộc</div>
+    </div>
+
+    <div class="upload-card">
+      <input type="file" id="input-dskh" accept=".xlsx,.xls">
+      <div class="badge badge-pending" id="badge-dskh">○</div>
+      <div class="upload-icon">🏢</div>
+      <div class="upload-title">DSKH CÔNG TY</div>
+      <div class="upload-desc">Danh sách KH công ty → TDV<br><small>Tự lưu, chỉ đổi khi cần</small></div>
+      <div class="upload-label" id="label-dskh">Không bắt buộc</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- Action Bar -->
+<div class="action-bar">
+  <button id="btn-calculate">Tính Thưởng</button>
+  <button id="btn-export"  class="btn-export"  style="display:none">Xuất Excel</button>
+  <button id="btn-clear"   class="btn-clear"   style="display:none">Xóa bộ nhớ</button>
+  <button id="btn-config"  class="btn-cfg">⚙ Cấu hình công thức</button>
+  <span id="stats"      style="display:none"></span>
+  <span id="saved-info" class="saved-info" style="display:none"></span>
+  <div class="legend" style="margin-left:auto">
+    <span><span class="legend-dot" style="background:#D6E8F8;border:1px solid #003366"></span>≥ 115%</span>
+    <span><span class="legend-dot" style="background:#EBF4FC;border:1px solid #004A91"></span>≥ 100%</span>
+    <span><span class="legend-dot" style="background:#FFF5E2;border:1px solid #7A5400"></span>60–99%</span>
+    <span><span class="legend-dot" style="background:#FDECEC;border:1px solid #A52222"></span>&lt; 60%</span>
+  </div>
+</div>
+
+<!-- Tab Navigation -->
+<div class="tab-nav">
+  <button class="tab-btn tab-active" id="tab-btn-tinh-thuong" onclick="switchTab('tinh-thuong')">📊 Tính Thưởng</button>
+  <button class="tab-btn" id="tab-btn-bao-cao" onclick="switchTab('bao-cao')">📈 Báo cáo</button>
+</div>
+
+<!-- Formula / Config Panel -->
+<div id="formula-panel" class="formula-panel">
+  <div class="formula-panel-header" onclick="toggleFormulaPanel()">
+    <h3>⚙ Cấu hình công thức tính KPI</h3>
+    <span style="font-size:11px;color:#888">Bấm để đóng/mở</span>
+  </div>
+  <div class="formula-body">
+
+    <div class="formula-section">
+      <h4>Trọng số PTML (%)</h4>
+      <p class="formula-note">Tổng phải = 100%. Công thức: N3×w1 + DS Tổng×w2 + DS Tổng+CT×w3 + ĐPKH×w4 + ĐPMH×w5</p>
+      <div class="formula-row"><label>% DS N3 (w1):</label><input id="w-n3" class="formula-inp" type="number" min="0" max="100"> %</div>
+      <div class="formula-row"><label>% DS Tổng (w2):</label><input id="w-tong" class="formula-inp" type="number" min="0" max="100"> %</div>
+      <div class="formula-row"><label>% DS Tổng+CT (w3):</label><input id="w-tongct" class="formula-inp" type="number" min="0" max="100"> %</div>
+      <div class="formula-row"><label>% ĐPKH (w4):</label><input id="w-dpkh" class="formula-inp" type="number" min="0" max="100"> %</div>
+      <div class="formula-row"><label>% ĐPMH (w5):</label><input id="w-dpmh" class="formula-inp" type="number" min="0" max="100"> %</div>
+    </div>
+
+    <div class="formula-section">
+      <h4>Công thức % Đạt N2</h4>
+      <p class="formula-note">
+        <b>Nếu % DS Tổng &lt; 100%:</b> % N2 = DS N2 / DS Tổng hoàn thành<br>
+        <b>Nếu % DS Tổng ≥ 100%:</b> % N2 = DS N2 / DS N2 Target
+      </p>
+      <div class="formula-row"><label>DS N2 Target =</label>DS Tổng Target × <input id="ds-n2-ratio" class="formula-inp" type="number" min="0" max="100"> %</div>
+      <div class="formula-row"><label>DS N3 Target =</label>DS Tổng Target × <input id="ds-n3-ratio" class="formula-inp" type="number" min="0" max="100"> %</div>
+      <div class="formula-row"><label>Ngưỡng phủ ĐPKH/ĐPMH:</label><input id="min-ds-phu" class="formula-inp" style="width:110px" type="text"> VNĐ</div>
+    </div>
+
+    <div class="formula-section">
+      <h4>Nhóm SP gộp ĐPMH</h4>
+      <p class="formula-note">Các mã SP trong cùng nhóm được cộng chung DS trước khi đếm phủ MH.</p>
+      <ul class="formula-group-list" id="dpmh-groups-display"></ul>
+      <p class="formula-note" style="margin-top:6px">Để thay đổi nhóm, sửa DPMH_GROUPS trong file js/config.js</p>
+    </div>
+
+    <div class="formula-section">
+      <h4>HSHT Lookup</h4>
+      <p class="formula-note"><b>TDV:</b> 0%→0 | 60%→0.6 | 80%→0.8 | 100%→1.0 | 115%→1.1 | 125%→1.2 | 135%→1.3</p>
+      <p class="formula-note"><b>QLBH:</b> 0%→0 | 60%→0.5 | 80%→0.65 | 90%→0.8 | 100%→1.0 | 110%→1.28 | 120%→1.5</p>
+      <p class="formula-note"><b>Hs KH CT:</b> DS=0→1.0 | DS≥200M→0.8 | DS≥400M→0.7</p>
+      <p class="formula-note" style="margin-top:6px">Để thay đổi, sửa HSHT_TDV/HSHT_QLBH trong js/config.js</p>
+    </div>
+
+    <div class="formula-section">
+      <h4>SP chỉ định tháng</h4>
+      <p class="formula-note">Mỗi tháng 1 SP chỉ định với số lượng tối thiểu mỗi TDV cần bán. Để trống = không áp dụng.</p>
+      <div class="formula-row"><label>Mã SP chỉ định:</label><input id="spcd-masp" class="formula-inp" type="text" placeholder="VD: TP001" style="width:90px"></div>
+      <div class="formula-row"><label>Số lượng target:</label><input id="spcd-soluong" class="formula-inp" type="number" min="0" style="width:90px"> cái/TDV</div>
+      <p class="formula-note" style="margin-top:4px">ĐPMH QLBH: ngưỡng = 500.000 × số TDV trực thuộc</p>
+    </div>
+
+  </div>
+  <div style="padding:12px 20px;border-top:1px solid #eee">
+    <button class="btn-apply-formula" onclick="applyFormulaConfig()">✓ Áp dụng thay đổi (cần Tính lại)</button>
+  </div>
+</div>
+
+<!-- Output Table -->
+<section class="output-section">
+  <div id="output">
+    <div class="loading" style="color:#bbb">
+      Upload file và nhấn <b>Tính Thưởng</b> để bắt đầu.
+    </div>
+  </div>
+</section>
+
+<!-- Analytics Section -->
+<section class="analytics-section" id="analytics-section" style="display:none">
+  <div id="analytics-content">
+    <div style="padding:40px;text-align:center;color:#aaa;font-size:14px">Nhấn <b>Tính Thưởng</b> rồi quay lại tab này.</div>
+  </div>
+</section>
+
+<!-- Preview Modal -->
+<div id="preview-modal" class="modal-overlay" onclick="if(event.target===this)closePreview()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="preview-title">Preview</h3>
+      <button class="modal-close" onclick="closePreview()">✕</button>
+    </div>
+    <div class="modal-body" id="preview-body"></div>
+    <div class="modal-count" id="preview-count"></div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="lib/xlsx.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/parser.js"></script>
+<script src="js/calculator.js"></script>
+<script src="js/renderer.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
