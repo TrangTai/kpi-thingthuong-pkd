@@ -203,7 +203,9 @@ async function onCalculate() {
   try {
     let donHangOrders;
     if (uploadedFiles.donHang) {
-      donHangOrders = await parseDonHang(uploadedFiles.donHang);
+      const dhSource = (document.querySelector('input[name="dh-source"]:checked') || {}).value || 'qtsl';
+      const parseFn  = dhSource === 'kinhdoanh' ? parseDonHangKinhDoanh : parseDonHang;
+      donHangOrders = await parseFn(uploadedFiles.donHang);
       staticData.donHangOrders = donHangOrders;
       _storePreview('donHang', donHangOrders);
       _showEyeBtn('don-hang', 'donHang');

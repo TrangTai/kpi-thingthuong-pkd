@@ -104,6 +104,54 @@ async function parseDhLon(file) {
   return _parseOrderSheet(wb.Sheets[sheetName]);
 }
 
+// ─────────────────────────────────────────────────────────────
+// 2b. ĐƠN HÀNG — Format Kinh Doanh (18 cột, header row 1)
+//    Col: [0]=MãĐH [1]=NgàyĐH [3]=TrạngThái [4]=MãKH [5]=TênKH
+//         [7]=MãSP [8]=TênSP  [10]=ĐơnGiá(filter=0) [11]=SốLượng
+//         [12]=TổngTiền(doanhSo) [15]=MãTDV
+//    nhomTinhLuong / nhomPTML: enrich từ bảng giá sau
+// ─────────────────────────────────────────────────────────────
+async function parseDonHangKinhDoanh(file) {
+  const buf = await readFileAsArrayBuffer(file);
+  const wb  = XLSX.read(buf, { type: 'array', cellDates: false });
+  return _parseOrderSheetKinhDoanh(wb.Sheets[wb.SheetNames[0]]);
+}
+
+function _parseOrderSheetKinhDoanh(sheet) {
+  const range     = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
+  const headerRow = findHeaderRow(sheet, 'Mã Đơn Hàng');
+
+  const orders = [];
+  for (let r = headerRow + 1; r <= range.e.r; r++) {
+    const maDH = getCellStr(sheet, r, 0);
+    if (!maDH) continue;
+
+    const donGia = getCellNumber(sheet, r, 10);  // Col 11: Đơn Giá — bỏ nếu = 0
+    if (donGia === 0) continue;
+
+    const doanhSo = getCellNumber(sheet, r, 12); // Col 13: Tổng Tiền
+
+    orders.push({
+      maDH,
+      maKH:          getCellStr(sheet, r, 4),    // Col 5
+      tenKH:         getCellStr(sheet, r, 5),    // Col 6
+      maSP:          getCellStr(sheet, r, 7),    // Col 8
+      tenSP:         getCellStr(sheet, r, 8),    // Col 9
+      maNV:          getCellStr(sheet, r, 15),   // Col 16
+      doanhSo,
+      doanhSoDPMH:   doanhSo,
+      soLuong:       getCellNumber(sheet, r, 11),// Col 12
+      ngayDay:       _getOrderDay(sheet, r, 1),  // Col 2: Ngày ĐH
+      nhomTinhLuong: '',
+      nhomPTML:      '',
+      qlbhNV:        '',
+      isCompanyKH:   false,
+      companyTDV:    null,
+    });
+  }
+  return orders;
+}
+
 // Chuyển Excel serial date hoặc chuỗi → ngày trong tháng (1-31)
 function _getOrderDay(sheet, row, col) {
   const cell = sheet[XLSX.utils.encode_cell({ r: row, c: col })];
