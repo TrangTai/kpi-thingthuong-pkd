@@ -42,7 +42,7 @@ function calculateKPI(allOrders, targets) {
     const subDots  = isQLBH ? (qlbhSubDots[tdv]  || new Set()) : null;
     const numSubs  = isQLBH ? (subCodes.size || 1) : 1;
 
-    const isRetailOf  = o => isQLBH ? subCodes.has(o.maNV)      : o.maNV === tdv;
+    const isRetailOf  = o => isQLBH ? (subCodes.has(o.maNV) || o.maNV === tdv) : o.maNV === tdv;
     const isCompanyOf = o => isQLBH ? subDots.has(o.companyTDV) : o.companyTDV === dotTDV;
     const belongsTo   = o => (!o.isCompanyKH && isRetailOf(o)) || (o.isCompanyKH && isCompanyOf(o));
 
@@ -146,7 +146,7 @@ function calculateKPI(allOrders, targets) {
     const hsAnhHuongN1 = getHsAnhHuongN1(pctDatN2);
 
     // ─── Bước 8: HSHT, hệ số KH CT ──────────────────────────
-    const hsht   = isQLBH ? getHshtQLBH(tyleTong) : getHshtTDV(tyleTong);
+    const hsht   = isQLBH ? getHshtQLBH(tyleTongCT) : getHshtTDV(tyleTongCT);
     const hsKhCT = getHsKhCongTy(Math.abs(dsCongTy));
 
     results.push({
