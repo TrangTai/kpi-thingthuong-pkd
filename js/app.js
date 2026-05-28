@@ -120,15 +120,15 @@ function exportFileData(key) {
     const data = key === 'donHang' ? previewData.donHang : previewData.dhLon;
     if (!data || !data.length) { alert('Chưa có dữ liệu.'); return; }
     fname = key === 'donHang' ? 'DonHang' : 'DHLon';
-    const hdrs = ['Mã ĐH','Mã KH','Tên KH','Mã SP','Tên SP','Mã NV','Tổng tiền','DS ĐPMH','SL','Ngày (ngày)','Nhóm TL','Nhóm PTML','KH CT?'];
+    const hdrs = ['Mã ĐH','Mã KH','Tên KH','Mã SP','Tên SP','Mã NV','Tên QLBH','Tổng tiền','DS ĐPMH','SL','Ngày (ngày)','Nhóm TL','Nhóm PTML','KH CT?'];
     const rows = data.map(o => [
-      o.maDH, o.maKH, o.tenKH, o.maSP, o.tenSP, o.maNV,
+      o.maDH, o.maKH, o.tenKH, o.maSP, o.tenSP, o.maNV, o.qlbhNV || '',
       Math.round(o.doanhSo), Math.round(o.doanhSoDPMH),
       o.soLuong || 0, o.ngayDay || 0,
       o.nhomTinhLuong, o.nhomPTML, o.isCompanyKH ? 'Có' : '',
     ]);
     const ws = XLSX.utils.aoa_to_sheet([hdrs, ...rows]);
-    ws['!cols'] = [8,10,20,8,20,8,14,14,6,8,10,10,6].map(w => ({ wch: w }));
+    ws['!cols'] = [8,10,20,8,20,8,18,14,14,6,8,10,10,6].map(w => ({ wch: w }));
     ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' };
     XLSX.utils.book_append_sheet(wb, ws, 'Dữ liệu');
   } else if (key === 'target') {
@@ -332,8 +332,8 @@ function showPreview(key) {
     const data = key === 'donHang' ? previewData.donHang : previewData.dhLon;
     if (!data || !data.length) { alert('Chưa có dữ liệu.'); return; }
     titleText = key === 'donHang' ? 'Đơn hàng' : 'ĐH Lộn';
-    headers = ['Mã ĐH','Mã KH','Tên KH','Mã SP','Tên SP','Mã NV','Tổng tiền','DS ĐPMH','Nhóm TL','Nhóm PTML','KH CT?'];
-    rows = data.map(o => [o.maDH, o.maKH, o.tenKH, o.maSP, o.tenSP, o.maNV,
+    headers = ['Mã ĐH','Mã KH','Tên KH','Mã SP','Tên SP','Mã NV','Tên QLBH','Tổng tiền','DS ĐPMH','Nhóm TL','Nhóm PTML','KH CT?'];
+    rows = data.map(o => [o.maDH, o.maKH, o.tenKH, o.maSP, o.tenSP, o.maNV, o.qlbhNV || '',
       Math.round(o.doanhSo).toLocaleString('vi-VN'),
       Math.round(o.doanhSoDPMH).toLocaleString('vi-VN'),
       o.nhomTinhLuong, o.nhomPTML, o.isCompanyKH ? '✓' : '']);
