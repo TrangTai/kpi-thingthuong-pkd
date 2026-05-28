@@ -59,6 +59,8 @@ function calculateKPI(allOrders, targets) {
       }
       if (o.isCompanyKH && isCompanyOf(o)) {
         dsCongTy += o.doanhSo;
+        if (o.nhomTinhLuong === 'Nhóm 2') dsN2 += o.doanhSo;
+        if (o.nhomPTML === 'Nhóm 3')       dsN3 += o.doanhSo;
         if (o.ngayDay > 0 && o.ngayDay <= 15) dsDay15 += o.doanhSo;
       }
     }
