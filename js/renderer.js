@@ -52,7 +52,7 @@ function renderTable(results) {
     { text: 'Tên TDV',             rowspan: 2, sticky: 2 },
     { text: 'Khu vực',             rowspan: 2, sticky: 3 },
     { text: 'Miền',                rowspan: 2 },
-    { text: 'QLBH',                rowspan: 2 },
+    { text: 'Tên QLBH',            rowspan: 2 },
     { text: 'Đối tượng',           rowspan: 2 },
     { text: 'KẾ HOẠCH',           span: 5, cls: 'h-plan'   },
     { text: 'HOÀN THÀNH',         span: 7, cls: 'h-actual' },
@@ -79,7 +79,7 @@ function renderTable(results) {
     { text: 'ĐPKH',           cls: 'h-actual', nf: 'dpkh',    ph: '>=',  key: r => r.dpkh,         fmt: 'num',  compact: true, tip: 'Số KH có DS ≥ 500.000đ (gồm KH CT)' },
     { text: 'ĐPMH',           cls: 'h-actual', nf: 'dpmh',    ph: '>=',  key: r => r.dpmh,         fmt: 'num',  compact: true, tip: 'Số MH có DS ≥ 500.000đ × số TDV (nhóm TP026/027/030, TB011-018 gộp)' },
     // TỶ LỆ (7)
-    { text: '% DS N2',         cls: 'h-ratio',  nf: 'pn2',     ph: '>=60',  key: r => r.pctDatN2,     fmt: 'pct', scale: 100, compact: true, tip: '<100%: DS N2/(DS Tổng×50%) | ≥100%: DS N2/DS N2 Target' },
+    { text: '% DS N2',         cls: 'h-ratio',  nf: 'pn2',     ph: '>=60',  key: r => r.tyLeN2,       fmt: 'pct', scale: 100, compact: true, tip: 'DS N2 / DS N2 Target (50% khoán)' },
     { text: '% DS N3',         cls: 'h-ratio',  nf: 'pn3',     ph: '>=60',  key: r => r.tyLeN3,       fmt: 'pct', scale: 100, compact: true, tip: 'DS N3 / DS N3 Target (8% khoán)' },
     { text: '% DS Tổng',       cls: 'h-ratio',  nf: 'pton',    ph: '>=60',  key: r => r.tyleTong,     fmt: 'pct', scale: 100, compact: true, tip: 'DS Tổng / DS Tổng Target' },
     { text: '% DS T+CT',       cls: 'h-ratio',  nf: 'ptonct',  ph: '>=60',  key: r => r.tyleTongCT,   fmt: 'pct', scale: 100, compact: true, tip: 'DS Tổng+CT / DS Tổng Target' },
@@ -303,7 +303,7 @@ function exportToExcel(results, dpkhDetail, dpmhDetail) {
 
   // ── Sheet 1: Tính Thưởng ─────────────────────────────────
   const hdrs = [
-    'Mã TDV','Tên TDV','Khu vực','Miền','QLBH','Đối tượng',
+    'Mã TDV','Tên TDV','Khu vực','Miền','Tên QLBH','Đối tượng',
     'DS N2 Target','DS N3 Target','DS Tổng Target','ĐPKH Target','ĐPMH Target',
     'DS N2 Thực','DS N3 Thực','DS Tổng Thực','DS Tổng+CT','DS Công ty',
     'DS N15','ĐPKH Thực','ĐPMH Thực',
@@ -316,7 +316,7 @@ function exportToExcel(results, dpkhDetail, dpmhDetail) {
     r.dsN2Target, r.dsN3Target, r.dsTongTarget, r.dpkhTarget, r.dpmhTarget,
     r.dsN2, r.dsN3, r.dsTong, r.dsTongCT, r.dsCongTy,
     r.dsDay15, r.dpkh, r.dpmh,
-    r.pctDatN2, r.tyLeN3, r.tyleTong, r.tyleTongCT, r.tyleDPKH, r.tyleDPMH, r.tyLeDay15,
+    r.tyLeN2, r.tyLeN3, r.tyleTong, r.tyleTongCT, r.tyleDPKH, r.tyleDPMH, r.tyLeDay15,
     r.ptml, r.pctDatN2, r.hsAnhHuongN1, r.hsht, r.hsKhCT,
     ...(cdMaSP ? [r.soLuongSpCd || 0, r.datSpCd ? 'Đạt' : 'Chưa đạt'] : []),
   ])];
