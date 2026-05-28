@@ -62,7 +62,8 @@ function calculateKPI(allOrders, targets) {
         if (o.ngayDay > 0 && o.ngayDay <= 15) dsDay15 += o.doanhSo;
       }
     }
-    const dsTongCT = dsTong + dsCongTy;
+    const dsCongTyCapped = dsCongTy > 0 ? Math.min(dsCongTy, target.dsTongTarget * 0.30) : dsCongTy;
+    const dsTongCT = dsTong + dsCongTyCapped;
 
     // ─── Bước 3: ĐPKH ───────────────────────────────────────
     const khMap  = {};

@@ -31,17 +31,18 @@ function renderAnalytics(results) {
     return;
   }
 
-  const cdMaSP = (CONFIG.SP_CHI_DINH.maSP || '').trim();
+  const cdMaSP  = (CONFIG.SP_CHI_DINH.maSP || '').trim();
+  const tdvOnly = results.filter(r => !r.isQLBH);
   el.innerHTML = _buildHTML(cdMaSP);
 
-  _renderCards(results);
-  _chartDsDist(results);         // 1
-  _chartDonuts(results, cdMaSP); // 2
-  _chartN2(results);             // 3
-  _chartN1(results);             // 4
-  _renderMien(results);          // 5
-  _chartN15(results);            // 6
-  _renderTopBottom(results);     // 7
+  _renderCards(tdvOnly);
+  _chartDsDist(tdvOnly);         // 1
+  _chartDonuts(tdvOnly, cdMaSP); // 2
+  _chartN2(tdvOnly);             // 3
+  _chartN1(tdvOnly);             // 4
+  _renderMien(tdvOnly);          // 5
+  _chartN15(tdvOnly);            // 6
+  _renderTopBottom(tdvOnly);     // 7
 }
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -262,10 +263,9 @@ function _chartN1(results) {
 
 // ── 5: Theo Miền — inline bars ───────────────────────────────
 function _renderMien(results) {
-  const tdvOnly = results.filter(r => !r.isQLBH);
-  const miens = [...new Set(tdvOnly.map(r => r.mien).filter(Boolean))];
+  const miens = [...new Set(results.map(r => r.mien).filter(Boolean))];
   const rows  = miens.map(m => {
-    const grp    = tdvOnly.filter(r => r.mien === m);
+    const grp    = results.filter(r => r.mien === m);
     const thuc   = grp.reduce((s, r) => s + (r.dsTong || 0), 0);
     const target = grp.reduce((s, r) => s + (r.dsTongTarget || 0), 0);
     const ratio  = target > 0 ? thuc / target : 0;
