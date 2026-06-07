@@ -597,6 +597,31 @@ th[title]:not([title=""]) { cursor: help; }
 
 .pres-hidden-txt { display: none; }
 
+.pres-greeting {
+  background: linear-gradient(135deg, #E8F4FD, #F0EAFF);
+  border: 1.5px solid #B8D4F0; border-radius: 10px;
+  padding: 13px 18px; margin-bottom: 14px; font-size: 13px;
+  color: #1A3055; line-height: 1.65;
+}
+.pres-greeting b { color: var(--navy); font-size: 14px; }
+
+.pres-motivation {
+  margin: 0 12px 12px; padding: 10px 14px;
+  background: linear-gradient(135deg, #FFF9E6, #FFFBF0);
+  border: 1.5px solid #FFE082; border-radius: 9px;
+  font-size: 12.5px; color: #3D2800; line-height: 1.7;
+}
+.pres-motivation b  { color: #7A5400; }
+.pres-motivation em { font-style: normal; }
+
+.pres-closing {
+  text-align: center; padding: 16px;
+  font-size: 14px; font-weight: 700; color: #2D1566;
+  background: linear-gradient(135deg, #EDE7F6, #F8F5FF);
+  border: 1.5px solid #D8CDF0; border-radius: 10px; margin-top: 6px;
+  letter-spacing: .3px;
+}
+
 .loading {
   padding: 48px;
   text-align: center;

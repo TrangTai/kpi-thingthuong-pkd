@@ -400,6 +400,44 @@ function _m(v) {
 }
 function _p(v) { return (+(v*100)).toFixed(1) + '%'; }
 
+function _buildMotivation(grp) {
+  const totalDS     = grp.reduce((s, r) => s + (r.dsTong || 0), 0);
+  const totalTarget = grp.reduce((s, r) => s + (r.dsTongTarget || 0), 0);
+  const gap         = Math.max(0, totalTarget - totalDS);
+  const pct         = totalTarget > 0 ? totalDS / totalTarget : 0;
+  const tdvN        = grp.length;
+  const failN       = grp.filter(r => _METRICS.some(mt => r[mt.key] < 0.6)).length;
+  const topMetric   = _METRICS.map(mt => ({ mt, n: grp.filter(r => r[mt.key] < 0.6).length }))
+                               .sort((a, b) => b.n - a.n)[0];
+
+  if (pct >= 0.9)
+    return `🏆 Đội đang đạt <b>${_p(pct)}</b> kế hoạch — rất xuất sắc! Chỉ còn <b>${_m(gap)}</b> nữa là về đích, hãy duy trì đà và bứt phá những ngày cuối tháng!`;
+  if (pct >= 0.75)
+    return `🚀 Đội đạt <b>${_p(pct)}</b>, còn thiếu <b>${_m(gap)}</b> để hoàn thành kế hoạch. <b>${failN}/${tdvN}</b> TDV cần cải thiện — nếu mỗi người thêm <b>${_m(gap / Math.max(failN,1))}</b>, đội sẽ về đích!`;
+  if (pct >= 0.6)
+    return `💪 Còn <b>${_m(gap)}</b> DS cần bổ sung. Ưu tiên tập trung vào <b>${topMetric.mt.icon} ${topMetric.mt.label}</b> — đây là chỉ tiêu có nhiều anh/chị chưa đạt nhất (<b>${topMetric.n} TDV</b>). Hãy đẩy mạnh tiếp cận khách hàng ngay hôm nay!`;
+  return `⚡ Kế hoạch còn nhiều thách thức (đạt <b>${_p(pct)}</b>), cần <b>${_m(gap)}</b> để hoàn thành. Tập trung ưu tiên <b>${topMetric.mt.icon} ${topMetric.mt.label}</b> và tăng cường ghé thăm khách hàng. Mỗi đơn hàng đều có giá trị — hãy hành động ngay!`;
+}
+
+function _buildMotivationText(grp) {
+  const totalDS     = grp.reduce((s, r) => s + (r.dsTong || 0), 0);
+  const totalTarget = grp.reduce((s, r) => s + (r.dsTongTarget || 0), 0);
+  const gap         = Math.max(0, totalTarget - totalDS);
+  const pct         = totalTarget > 0 ? totalDS / totalTarget : 0;
+  const tdvN        = grp.length;
+  const failN       = grp.filter(r => _METRICS.some(mt => r[mt.key] < 0.6)).length;
+  const topMetric   = _METRICS.map(mt => ({ mt, n: grp.filter(r => r[mt.key] < 0.6).length }))
+                               .sort((a, b) => b.n - a.n)[0];
+
+  if (pct >= 0.9)
+    return `🏆 Đội đang đạt ${_p(pct)} kế hoạch — rất xuất sắc! Chỉ còn ${_m(gap)} nữa là về đích, hãy duy trì đà và bứt phá những ngày cuối tháng!`;
+  if (pct >= 0.75)
+    return `🚀 Đội đạt ${_p(pct)}, còn thiếu ${_m(gap)} để hoàn thành kế hoạch. ${failN}/${tdvN} TDV cần cải thiện — nếu mỗi người thêm ${_m(gap / Math.max(failN,1))}, đội sẽ về đích!`;
+  if (pct >= 0.6)
+    return `💪 Còn ${_m(gap)} DS cần bổ sung. Ưu tiên tập trung vào ${topMetric.mt.label} — đây là chỉ tiêu có nhiều anh/chị chưa đạt nhất (${topMetric.n} TDV). Hãy đẩy mạnh tiếp cận khách hàng ngay hôm nay!`;
+  return `⚡ Kế hoạch còn nhiều thách thức (đạt ${_p(pct)}), cần ${_m(gap)} để hoàn thành. Tập trung ưu tiên ${topMetric.mt.label} và tăng cường ghé thăm khách hàng. Mỗi đơn hàng đều có giá trị — hãy hành động ngay!`;
+}
+
 function renderPresentation(results) {
   const el = document.getElementById('presentation-section');
   if (!el) return;
@@ -407,7 +445,6 @@ function renderPresentation(results) {
   const tdvOnly = results.filter(r => !r.isQLBH);
   const miens   = [...new Set(tdvOnly.map(r => r.mien).filter(Boolean))].sort();
 
-  // Count total warnings
   let totalWarn = 0;
   miens.forEach(m => {
     const g = tdvOnly.filter(r => r.mien === m);
@@ -420,29 +457,23 @@ function renderPresentation(results) {
   }
 
   const blocks = miens.map(mien => {
-    const grp = tdvOnly.filter(r => r.mien === mien);
+    const grp    = tdvOnly.filter(r => r.mien === mien);
     const mienId = 'pm-' + mien.replace(/\W/g,'');
 
     const metricRows = _METRICS.map((mt, idx) => {
-      const failing = grp.filter(r => r[mt.key] < 0.6)
-                         .sort((a, b) => a[mt.key] - b[mt.key]);
+      const failing = grp.filter(r => r[mt.key] < 0.6).sort((a, b) => a[mt.key] - b[mt.key]);
       if (!failing.length) return '';
-
-      // HTML row
       const chips = failing.map(r => {
         const pv  = r[mt.key];
         const cls = pv < 0.4 ? 'chip-danger' : 'chip-warn';
         return `<span class="pres-chip ${cls}">
-          <b>${r.tenTDV}</b>
-          <em>${_p(pv)}</em>
+          <b>${r.tenTDV}</b><em>${_p(pv)}</em>
           <small>${mt.detail(r).split('·')[1]?.trim() || ''}</small>
         </span>`;
       }).join('');
-
       return `<div class="pres-metric">
         <div class="pres-metric-label">
-          <span class="pm-num">${idx+1}</span>
-          <span class="pm-icon">${mt.icon}</span>
+          <span class="pm-num">${idx+1}</span><span class="pm-icon">${mt.icon}</span>
           <span class="pm-title">${mt.label} chưa đạt</span>
           <span class="pm-badge">${failing.length} TDV</span>
         </div>
@@ -452,8 +483,8 @@ function renderPresentation(results) {
 
     if (!metricRows.trim()) return '';
 
-    const warnCount = _METRICS.reduce((s, mt) =>
-      s + grp.filter(r => r[mt.key] < 0.6).length, 0);
+    const warnCount  = _METRICS.reduce((s, mt) => s + grp.filter(r => r[mt.key] < 0.6).length, 0);
+    const motivation = _buildMotivation(grp);
 
     return `<div class="pres-mien-block">
       <div class="pres-mien-hd">
@@ -462,28 +493,40 @@ function renderPresentation(results) {
         <span class="pm-mien-count">${warnCount} trường hợp chưa đạt</span>
         <button class="btn-copy-mien" onclick="copyMien('${mienId}')">📋 Copy</button>
       </div>
-      <div class="pres-mien-body" id="${mienId}-body">${metricRows}</div>
+      <div class="pres-mien-body">${metricRows}</div>
+      <div class="pres-motivation">${motivation}</div>
       <textarea id="${mienId}" class="pres-hidden-txt" readonly>${_buildMienText(mien, grp)}</textarea>
     </div>`;
   }).filter(Boolean).join('');
 
   el.innerHTML = `
+<div class="pres-greeting">
+  👋 <b>Chào các anh/chị,</b><br>
+  <span>Dưới đây là báo cáo tổng hợp các chỉ tiêu kinh doanh chưa đạt theo từng Miền. Đề nghị các anh/chị xem xét và có kế hoạch cải thiện kịp thời.</span>
+</div>
 <div class="pres-toolbar">
   <span class="pres-count">⚠&nbsp; <b>${miens.length}</b> miền · <b>${totalWarn}</b> trường hợp chưa đạt 60%</span>
   <button class="btn-copy-mien" style="margin-left:auto" onclick="copyAllPres()">📋 Copy tất cả</button>
 </div>
-${blocks}`;
+${blocks}
+<div class="pres-closing">
+  🌟 <b>Chúc các anh/chị may mắn và đạt kết quả tốt!</b>
+</div>`;
 }
 
 function _buildMienText(mien, grp) {
-  const lines = [`📍 ${mien}\n`];
+  const lines = [
+    `Chào các anh/chị ${mien},\n`,
+    `📍 ${mien.toUpperCase()}\n`,
+  ];
   _METRICS.forEach((mt, i) => {
-    const failing = grp.filter(r => r[mt.key] < 0.6)
-                       .sort((a, b) => a[mt.key] - b[mt.key]);
+    const failing = grp.filter(r => r[mt.key] < 0.6).sort((a, b) => a[mt.key] - b[mt.key]);
     if (!failing.length) return;
     const list = failing.map(r => `${r.tenTDV} (${mt.detail(r)})`).join(', ');
     lines.push(`${i+1}. ${mt.icon} ${mt.label} chưa đạt: ${list}`);
   });
+  lines.push(`\n${_buildMotivationText(grp)}`);
+  lines.push(`\nChúc các anh/chị may mắn và đạt kết quả tốt! 🌟`);
   return lines.join('\n');
 }
 
