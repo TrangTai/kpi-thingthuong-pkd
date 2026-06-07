@@ -376,115 +376,135 @@ function _applyPctFormat(ws, colIndices, rowCount) {
 }
 
 // ============================================================
-// THUYẾT TRÌNH — Cảnh báo TDV chỉ số thấp
+// THUYẾT TRÌNH — Cảnh báo theo Miền, gom theo chỉ tiêu
 // ============================================================
+
+const _METRICS = [
+  { key:'tyleTong',  label:'Doanh số tổng',   icon:'💰', unit:'',
+    detail: r => `${_p(r.tyleTong)} · còn thiếu ${_m(Math.max(0, r.dsTongTarget - r.dsTong))}` },
+  { key:'tyLeN2',    label:'DS Nhóm 2',        icon:'📦', unit:'',
+    detail: r => `${_p(r.tyLeN2)} · còn thiếu ${_m(Math.max(0, r.dsN2Target - r.dsN2))}` },
+  { key:'tyleDPKH',  label:'ĐPKH',             icon:'👥', unit:'KH',
+    detail: r => `${_p(r.tyleDPKH)} · thiếu ${Math.max(0, r.dpkhTarget - r.dpkh)} KH` },
+  { key:'tyleDPMH',  label:'ĐPMH',             icon:'🏪', unit:'MH',
+    detail: r => `${_p(r.tyleDPMH)} · thiếu ${Math.max(0, r.dpmhTarget - r.dpmh)} MH` },
+  { key:'ptml',      label:'PTML tổng hợp',    icon:'📊', unit:'',
+    detail: r => `${_p(r.ptml)}` },
+];
+
+function _m(v) {
+  const a = Math.abs(v||0), s = v < 0 ? '-' : '';
+  if (a >= 1e9) return s + (a/1e9).toFixed(1) + ' tỷ';
+  if (a >= 1e6) return s + Math.round(a/1e6) + 'M';
+  return s + Math.round(a/1e3) + 'K';
+}
+function _p(v) { return (+(v*100)).toFixed(1) + '%'; }
 
 function renderPresentation(results) {
   const el = document.getElementById('presentation-section');
   if (!el) return;
 
   const tdvOnly = results.filter(r => !r.isQLBH);
-  const warns   = tdvOnly.filter(r =>
-    r.tyleTong < 0.6 || r.tyleTongCT < 0.6 ||
-    r.tyLeN2   < 0.6 || r.tyleDPKH   < 0.6 ||
-    r.tyleDPMH < 0.6 || r.ptml       < 0.6
-  ).sort((a, b) => a.ptml - b.ptml);
+  const miens   = [...new Set(tdvOnly.map(r => r.mien).filter(Boolean))].sort();
 
-  if (!warns.length) {
-    el.innerHTML = `<div class="pres-empty">✅ Tất cả TDV đều đạt trên 60% các chỉ tiêu — không có cảnh báo.</div>`;
+  // Count total warnings
+  let totalWarn = 0;
+  miens.forEach(m => {
+    const g = tdvOnly.filter(r => r.mien === m);
+    _METRICS.forEach(mt => { totalWarn += g.filter(r => r[mt.key] < 0.6).length; });
+  });
+
+  if (!totalWarn) {
+    el.innerHTML = `<div class="pres-empty">✅ Tất cả TDV đều đạt trên 60% mọi chỉ tiêu!</div>`;
     return;
   }
 
-  const cards = warns.map(r => {
-    const txt = _buildWarnText(r);
-    const id  = 'wt-' + r.maTDV.replace(/\W/g,'');
-    return `
-<div class="pres-card">
-  <div class="pres-card-hd">
-    <span class="pres-code">${r.maTDV}</span>
-    <span class="pres-name">${r.tenTDV}</span>
-    <span class="pres-area">${r.khuVuc}${r.mien ? ' · ' + r.mien : ''}</span>
-    <button class="btn-copy-warn" onclick="copyWarn('${id}')">📋 Copy</button>
-  </div>
-  <div class="pres-badges">${_warnBadges(r)}</div>
-  <textarea id="${id}" class="pres-text" readonly rows="14">${txt}</textarea>
-</div>`;
-  }).join('');
+  const blocks = miens.map(mien => {
+    const grp = tdvOnly.filter(r => r.mien === mien);
+    const mienId = 'pm-' + mien.replace(/\W/g,'');
+
+    const metricRows = _METRICS.map((mt, idx) => {
+      const failing = grp.filter(r => r[mt.key] < 0.6)
+                         .sort((a, b) => a[mt.key] - b[mt.key]);
+      if (!failing.length) return '';
+
+      // HTML row
+      const chips = failing.map(r => {
+        const pv  = r[mt.key];
+        const cls = pv < 0.4 ? 'chip-danger' : 'chip-warn';
+        return `<span class="pres-chip ${cls}">
+          <b>${r.tenTDV}</b>
+          <em>${_p(pv)}</em>
+          <small>${mt.detail(r).split('·')[1]?.trim() || ''}</small>
+        </span>`;
+      }).join('');
+
+      return `<div class="pres-metric">
+        <div class="pres-metric-label">
+          <span class="pm-num">${idx+1}</span>
+          <span class="pm-icon">${mt.icon}</span>
+          <span class="pm-title">${mt.label} chưa đạt</span>
+          <span class="pm-badge">${failing.length} TDV</span>
+        </div>
+        <div class="pres-chips">${chips}</div>
+      </div>`;
+    }).join('');
+
+    if (!metricRows.trim()) return '';
+
+    const warnCount = _METRICS.reduce((s, mt) =>
+      s + grp.filter(r => r[mt.key] < 0.6).length, 0);
+
+    return `<div class="pres-mien-block">
+      <div class="pres-mien-hd">
+        <span class="pm-loc">📍</span>
+        <span class="pm-mien-name">${mien}</span>
+        <span class="pm-mien-count">${warnCount} trường hợp chưa đạt</span>
+        <button class="btn-copy-mien" onclick="copyMien('${mienId}')">📋 Copy</button>
+      </div>
+      <div class="pres-mien-body" id="${mienId}-body">${metricRows}</div>
+      <textarea id="${mienId}" class="pres-hidden-txt" readonly>${_buildMienText(mien, grp)}</textarea>
+    </div>`;
+  }).filter(Boolean).join('');
 
   el.innerHTML = `
 <div class="pres-toolbar">
-  <span class="pres-count">⚠ ${warns.length} TDV cần chú ý</span>
+  <span class="pres-count">⚠&nbsp; <b>${miens.length}</b> miền · <b>${totalWarn}</b> trường hợp chưa đạt 60%</span>
+  <button class="btn-copy-mien" style="margin-left:auto" onclick="copyAllPres()">📋 Copy tất cả</button>
 </div>
-${cards}`;
+${blocks}`;
 }
 
-function _fmtM2(v) {
-  const a = Math.abs(v || 0), s = v < 0 ? '-' : '';
-  if (a >= 1e9) return s + (a/1e9).toFixed(2) + ' tỷ';
-  if (a >= 1e6) return s + Math.round(a/1e6) + 'M';
-  return s + Math.round(a/1e3) + 'K';
-}
-function _fmtP2(v) { return (+(v*100)).toFixed(1) + '%'; }
-
-function _buildWarnText(r) {
-  const pct = v => _fmtP2(v);
-  const mon = _fmtM2;
-  const ok  = v => v >= 1.0 ? '✓' : v >= 0.6 ? '▲' : '⚠';
-
-  const low = [];
-  if (r.tyleTong  < 0.6) low.push('DS Tổng');
-  if (r.tyLeN2    < 0.6) low.push('DS Nhóm 2');
-  if (r.tyleDPKH  < 0.6) low.push('ĐPKH');
-  if (r.tyleDPMH  < 0.6) low.push('ĐPMH');
-  if (r.ptml      < 0.6) low.push('PTML');
-
-  const con = Math.max(0, r.dsTongTarget - r.dsTong);
-
-  return `Kính gửi ${r.tenTDV},
-
-Dưới đây là kết quả kinh doanh hiện tại của bạn:
-
-${ok(r.tyleTong)}  DS Tổng   : ${mon(r.dsTong)} / ${mon(r.dsTongTarget)} → ${pct(r.tyleTong)}
-${ok(r.tyleTongCT)} DS T+CT   : ${mon(r.dsTongCT)} → ${pct(r.tyleTongCT)}
-${ok(r.tyLeN2)}  DS Nhóm 2 : ${mon(r.dsN2)} / ${mon(r.dsN2Target)} → ${pct(r.tyLeN2)}
-${ok(r.tyleDPKH)} ĐPKH      : ${r.dpkh} / ${r.dpkhTarget} KH → ${pct(r.tyleDPKH)}
-${ok(r.tyleDPMH)} ĐPMH      : ${r.dpmh} / ${r.dpmhTarget} MH → ${pct(r.tyleDPMH)}
-${ok(r.ptml)}  PTML      : ${pct(r.ptml)}
-${ok(r.hsht)}  HSHT      : ${r.hsht ? r.hsht.toFixed(2) : '-'}
-${con > 0 ? `\n⚡ Cần thêm ${mon(con)} DS Tổng để hoàn thành kế hoạch tháng.\n` : ''}
-Chỉ tiêu cần tập trung cải thiện: ${low.join(', ')}.
-
-Đề nghị bạn nỗ lực đẩy mạnh doanh số trong những ngày còn lại của tháng để đạt kế hoạch đề ra.
-
-Trân trọng.`;
+function _buildMienText(mien, grp) {
+  const lines = [`📍 ${mien}\n`];
+  _METRICS.forEach((mt, i) => {
+    const failing = grp.filter(r => r[mt.key] < 0.6)
+                       .sort((a, b) => a[mt.key] - b[mt.key]);
+    if (!failing.length) return;
+    const list = failing.map(r => `${r.tenTDV} (${mt.detail(r)})`).join(', ');
+    lines.push(`${i+1}. ${mt.icon} ${mt.label} chưa đạt: ${list}`);
+  });
+  return lines.join('\n');
 }
 
-function _warnBadges(r) {
-  const b = (label, v, isNum) => {
-    const cls = v < 0.6 ? 'bdg-red' : v < 1.0 ? 'bdg-amber' : 'bdg-blue';
-    const txt = isNum ? v.toFixed(2) : _fmtP2(v);
-    return `<span class="pres-bdg ${cls}">${label}: ${txt}</span>`;
-  };
-  return [
-    b('DS Tổng', r.tyleTong),
-    b('DS T+CT', r.tyleTongCT),
-    b('N2', r.tyLeN2),
-    b('ĐPKH', r.tyleDPKH),
-    b('ĐPMH', r.tyleDPMH),
-    b('PTML', r.ptml),
-    b('HSHT', r.hsht, true),
-  ].join('');
-}
-
-function copyWarn(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  navigator.clipboard.writeText(el.value).then(() => {
-    const btn = el.closest('.pres-card').querySelector('.btn-copy-warn');
+function copyMien(id) {
+  const ta = document.getElementById(id);
+  if (!ta) return;
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const btn = ta.closest('.pres-mien-block').querySelector('.btn-copy-mien');
     const orig = btn.textContent;
-    btn.textContent = '✓ Đã copy!';
-    btn.style.background = '#00A651';
-    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 2000);
+    btn.textContent = '✓ Đã copy!'; btn.style.background = '#00A651'; btn.style.color = '#fff';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }, 2200);
+  });
+}
+
+function copyAllPres() {
+  const all = [...document.querySelectorAll('.pres-hidden-txt')].map(t => t.value).join('\n\n─────────────────\n\n');
+  navigator.clipboard.writeText(all).then(() => {
+    const btn = document.querySelector('.pres-toolbar .btn-copy-mien');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Đã copy!'; btn.style.background = '#00A651'; btn.style.color = '#fff';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }, 2200);
   });
 }
 
