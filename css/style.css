@@ -512,6 +512,56 @@ th[title]:not([title=""]) { cursor: help; }
 .summary-bar b { font-weight: 700; color: var(--navy); }
 
 /* Loading / Error */
+/* ── Thuyết trình / Cảnh báo ─────────────────────────────── */
+.pres-section-hd {
+  display: flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, var(--navy) 0%, #7B1FA2 100%);
+  color: #fff; font-weight: 700; font-size: 13px;
+  padding: 10px 18px; cursor: pointer; user-select: none;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0; margin-top: 28px;
+  letter-spacing: .4px;
+}
+.pres-section-hd:hover { opacity: .92; }
+#presentation-section { background: #faf9ff; border: 1px solid #E0D7F5; border-top: none;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg); padding: 16px; }
+.pres-empty { padding: 20px; text-align: center; color: #00A651; font-size: 13px; font-weight: 600; }
+.pres-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.pres-count { font-size: 13px; font-weight: 700; color: #7B1FA2; }
+.pres-card {
+  background: #fff; border: 1px solid #E8E0F5;
+  border-radius: var(--radius-lg); margin-bottom: 14px;
+  box-shadow: 0 1px 4px rgba(123,31,162,.07);
+}
+.pres-card-hd {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 10px 14px; border-bottom: 1px solid #F0E8FC;
+  background: linear-gradient(90deg,#F5F0FF,#fff);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+.pres-code { font-family: monospace; font-weight: 700; color: var(--navy); font-size: 13px; }
+.pres-name { font-weight: 700; font-size: 13px; color: #3D0A5C; }
+.pres-area { font-size: 11px; color: var(--gray-400); }
+.btn-copy-warn {
+  margin-left: auto; padding: 4px 12px; border-radius: 20px;
+  border: 1.5px solid #7B1FA2; color: #7B1FA2; background: #fff;
+  font-size: 11.5px; font-weight: 700; cursor: pointer;
+  transition: all .15s; white-space: nowrap;
+}
+.btn-copy-warn:hover { background: #7B1FA2; color: #fff; }
+.pres-badges { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 14px; }
+.pres-bdg { font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 20px; }
+.bdg-red   { background: var(--red-bg);   color: #A52222; border: 1px solid #F5C0C0; }
+.bdg-amber { background: var(--amber-bg); color: #7A5400; border: 1px solid #F0D080; }
+.bdg-blue  { background: var(--blue-50);  color: var(--blue); border: 1px solid #B8D4F0; }
+.pres-text {
+  width: 100%; box-sizing: border-box; margin: 0;
+  padding: 12px 14px; font-family: 'Be Vietnam Pro', monospace; font-size: 12.5px;
+  line-height: 1.75; color: #2D2D2D; background: #FDFBFF;
+  border: none; border-top: 1px solid #F0E8FC;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  resize: vertical; outline: none;
+}
+
 .loading {
   padding: 48px;
   text-align: center;

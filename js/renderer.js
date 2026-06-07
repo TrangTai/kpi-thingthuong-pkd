@@ -376,6 +376,119 @@ function _applyPctFormat(ws, colIndices, rowCount) {
 }
 
 // ============================================================
+// THUYẾT TRÌNH — Cảnh báo TDV chỉ số thấp
+// ============================================================
+
+function renderPresentation(results) {
+  const el = document.getElementById('presentation-section');
+  if (!el) return;
+
+  const tdvOnly = results.filter(r => !r.isQLBH);
+  const warns   = tdvOnly.filter(r =>
+    r.tyleTong < 0.6 || r.tyleTongCT < 0.6 ||
+    r.tyLeN2   < 0.6 || r.tyleDPKH   < 0.6 ||
+    r.tyleDPMH < 0.6 || r.ptml       < 0.6
+  ).sort((a, b) => a.ptml - b.ptml);
+
+  if (!warns.length) {
+    el.innerHTML = `<div class="pres-empty">✅ Tất cả TDV đều đạt trên 60% các chỉ tiêu — không có cảnh báo.</div>`;
+    return;
+  }
+
+  const cards = warns.map(r => {
+    const txt = _buildWarnText(r);
+    const id  = 'wt-' + r.maTDV.replace(/\W/g,'');
+    return `
+<div class="pres-card">
+  <div class="pres-card-hd">
+    <span class="pres-code">${r.maTDV}</span>
+    <span class="pres-name">${r.tenTDV}</span>
+    <span class="pres-area">${r.khuVuc}${r.mien ? ' · ' + r.mien : ''}</span>
+    <button class="btn-copy-warn" onclick="copyWarn('${id}')">📋 Copy</button>
+  </div>
+  <div class="pres-badges">${_warnBadges(r)}</div>
+  <textarea id="${id}" class="pres-text" readonly rows="14">${txt}</textarea>
+</div>`;
+  }).join('');
+
+  el.innerHTML = `
+<div class="pres-toolbar">
+  <span class="pres-count">⚠ ${warns.length} TDV cần chú ý</span>
+</div>
+${cards}`;
+}
+
+function _fmtM2(v) {
+  const a = Math.abs(v || 0), s = v < 0 ? '-' : '';
+  if (a >= 1e9) return s + (a/1e9).toFixed(2) + ' tỷ';
+  if (a >= 1e6) return s + Math.round(a/1e6) + 'M';
+  return s + Math.round(a/1e3) + 'K';
+}
+function _fmtP2(v) { return (+(v*100)).toFixed(1) + '%'; }
+
+function _buildWarnText(r) {
+  const pct = v => _fmtP2(v);
+  const mon = _fmtM2;
+  const ok  = v => v >= 1.0 ? '✓' : v >= 0.6 ? '▲' : '⚠';
+
+  const low = [];
+  if (r.tyleTong  < 0.6) low.push('DS Tổng');
+  if (r.tyLeN2    < 0.6) low.push('DS Nhóm 2');
+  if (r.tyleDPKH  < 0.6) low.push('ĐPKH');
+  if (r.tyleDPMH  < 0.6) low.push('ĐPMH');
+  if (r.ptml      < 0.6) low.push('PTML');
+
+  const con = Math.max(0, r.dsTongTarget - r.dsTong);
+
+  return `Kính gửi ${r.tenTDV},
+
+Dưới đây là kết quả kinh doanh hiện tại của bạn:
+
+${ok(r.tyleTong)}  DS Tổng   : ${mon(r.dsTong)} / ${mon(r.dsTongTarget)} → ${pct(r.tyleTong)}
+${ok(r.tyleTongCT)} DS T+CT   : ${mon(r.dsTongCT)} → ${pct(r.tyleTongCT)}
+${ok(r.tyLeN2)}  DS Nhóm 2 : ${mon(r.dsN2)} / ${mon(r.dsN2Target)} → ${pct(r.tyLeN2)}
+${ok(r.tyleDPKH)} ĐPKH      : ${r.dpkh} / ${r.dpkhTarget} KH → ${pct(r.tyleDPKH)}
+${ok(r.tyleDPMH)} ĐPMH      : ${r.dpmh} / ${r.dpmhTarget} MH → ${pct(r.tyleDPMH)}
+${ok(r.ptml)}  PTML      : ${pct(r.ptml)}
+${ok(r.hsht)}  HSHT      : ${r.hsht ? r.hsht.toFixed(2) : '-'}
+${con > 0 ? `\n⚡ Cần thêm ${mon(con)} DS Tổng để hoàn thành kế hoạch tháng.\n` : ''}
+Chỉ tiêu cần tập trung cải thiện: ${low.join(', ')}.
+
+Đề nghị bạn nỗ lực đẩy mạnh doanh số trong những ngày còn lại của tháng để đạt kế hoạch đề ra.
+
+Trân trọng.`;
+}
+
+function _warnBadges(r) {
+  const b = (label, v, isNum) => {
+    const cls = v < 0.6 ? 'bdg-red' : v < 1.0 ? 'bdg-amber' : 'bdg-blue';
+    const txt = isNum ? v.toFixed(2) : _fmtP2(v);
+    return `<span class="pres-bdg ${cls}">${label}: ${txt}</span>`;
+  };
+  return [
+    b('DS Tổng', r.tyleTong),
+    b('DS T+CT', r.tyleTongCT),
+    b('N2', r.tyLeN2),
+    b('ĐPKH', r.tyleDPKH),
+    b('ĐPMH', r.tyleDPMH),
+    b('PTML', r.ptml),
+    b('HSHT', r.hsht, true),
+  ].join('');
+}
+
+function copyWarn(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  navigator.clipboard.writeText(el.value).then(() => {
+    const btn = el.closest('.pres-card').querySelector('.btn-copy-warn');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Đã copy!';
+    btn.style.background = '#00A651';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 2000);
+  });
+}
+
+// ============================================================
 // ZOOM (CSS zoom property — adjusts layout, not just visual)
 // ============================================================
 

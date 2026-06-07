@@ -237,6 +237,7 @@ async function onCalculate() {
 
     saveResults(results, dpkhDetail, dpmhDetail, statsText);
     renderOutput(results, statsText, new Date());
+    renderPresentation(results);
     document.getElementById('btn-export').style.display = 'inline-block';
     if (document.getElementById('tab-btn-bao-cao').classList.contains('tab-active')) {
       renderAnalytics(results);
@@ -263,6 +264,8 @@ function renderOutput(results, statsText, timestamp) {
     savedEl.style.display = 'inline';
   }
   document.getElementById('btn-clear').style.display = 'inline-block';
+  const pw = document.getElementById('presentation-wrap');
+  if (pw) pw.style.display = '';
 }
 
 // ─── localStorage: kết quả ───────────────────────────────────
@@ -318,6 +321,15 @@ function onClear() {
   switchTab('tinh-thuong');
 
   document.querySelectorAll('.btn-file-export, .btn-eye').forEach(b => b.remove());
+}
+
+function togglePresentation() {
+  const sec = document.getElementById('presentation-section');
+  const ico = document.getElementById('pres-toggle-icon');
+  if (!sec) return;
+  const hidden = sec.style.display === 'none';
+  sec.style.display = hidden ? '' : 'none';
+  if (ico) ico.textContent = hidden ? '▼' : '▶';
 }
 
 function showError(msg) {
