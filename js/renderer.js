@@ -43,8 +43,10 @@ function renderTable(results) {
   _allResults = results || [];
   if (!_allResults.length) return '<p style="color:#888;padding:20px">Không có dữ liệu.</p>';
 
-  const cdMaSP  = (CONFIG.SP_CHI_DINH.maSP || '').trim();
-  const cdLabel = cdMaSP ? `SP CĐ: ${cdMaSP} (≥${CONFIG.SP_CHI_DINH.soLuongTarget} cái)` : 'SP chỉ định';
+  const cdMaSPStr = (CONFIG.SP_CHI_DINH.maSP || '').trim();
+  const cdLabel = cdMaSPStr
+    ? `SP CĐ: ${cdMaSPStr} (≥${CONFIG.SP_CHI_DINH.soLuongTarget} hộp · ≥${CONFIG.SP_CHI_DINH.dpkhSpCdTarget} KH)`
+    : 'SP chỉ định';
 
   // ── Header row 1 (group headers) ──────────────────────────
   const groups = [
@@ -58,7 +60,7 @@ function renderTable(results) {
     { text: 'HOÀN THÀNH',         span: 7, cls: 'h-actual' },
     { text: 'TỶ LỆ HOÀN THÀNH',  span: 7, cls: 'h-ratio'  },
     { text: 'TỔNG HỢP KPI',       span: 5, cls: 'h-kpi'   },
-    { text: cdLabel,               span: 2, cls: 'h-spcd'  },
+    { text: cdLabel,               span: 3, cls: 'h-spcd'  },
   ];
 
   // ── Header row 2 + filter/data column definitions ─────────
@@ -92,9 +94,10 @@ function renderTable(results) {
     { text: 'Hs N1',           cls: 'h-kpi',    nf: 'hn1',     ph: '>=0.8', key: r => r.hsAnhHuongN1, fmt: 'hs',  compact: true, tip: 'Hs ảnh hưởng N1: <60%→0.7 | 60%→0.8 | 80%→0.9 | ≥100%→1.0' },
     { text: 'HSHT',            cls: 'h-kpi',    nf: 'hsht',    ph: '>=1',   key: r => r.hsht,         fmt: 'hs',  compact: true, tip: 'TDV: 0%→0|60%→0.6|80%→0.8|100%→1.0|115%→1.1|125%→1.2|135%→1.3\nQLBH: 0%→0|60%→0.5|80%→0.65|90%→0.8|100%→1.0|110%→1.28|120%→1.5' },
     { text: 'Hs KH CT',        cls: 'h-kpi',    nf: 'hsct',    ph: '>=0.8', key: r => r.hsKhCT,       fmt: 'hs',  compact: true, tip: 'DS CT=0→1.0 | ≥200M→0.8 | ≥400M→0.7' },
-    // SP CHỈ ĐỊNH (2)
-    { text: 'SL SP CĐ',        cls: 'h-spcd',   nf: 'slspcd',  ph: '>=5',   key: r => r.soLuongSpCd || 0, fmt: 'num', compact: true, tip: `Số lượng ${cdMaSP || 'SP chỉ định'} đã bán` },
-    { text: 'Đạt SP CĐ',       cls: 'h-spcd',   nf: 'datspcd', ph: '>=1',   key: r => r.datSpCd === true ? 1 : 0, fmt: '_spcd', compact: true, tip: `Đạt ≥ ${CONFIG.SP_CHI_DINH.soLuongTarget} cái ${cdMaSP || ''}` },
+    // SP CHỈ ĐỊNH (3)
+    { text: 'SL SP CĐ',        cls: 'h-spcd',   nf: 'slspcd',  ph: '>=5',   key: r => r.soLuongSpCd || 0, fmt: 'num', compact: true, tip: `Tổng số hộp ${cdMaSPStr || 'SP chỉ định'} đã bán` },
+    { text: 'KH phủ SP CĐ',    cls: 'h-spcd',   nf: 'khspcd',  ph: '>=5',   key: r => r.dpkhSpCd || 0, fmt: 'num', compact: true, tip: `Số KH mua ít nhất 1 trong các mã ${cdMaSPStr || 'SP chỉ định'}` },
+    { text: 'Đạt SP CĐ',       cls: 'h-spcd',   nf: 'datspcd', ph: '>=1',   key: r => r.datSpCd === true ? 1 : 0, fmt: '_spcd', compact: true, tip: `Đạt khi ≥${CONFIG.SP_CHI_DINH.soLuongTarget} hộp VÀ ≥${CONFIG.SP_CHI_DINH.dpkhSpCdTarget} KH phủ` },
   ];
 
   let html = `
@@ -206,14 +209,14 @@ function renderTable(results) {
   const totalRows = _allResults.length;
   const qlbhRows  = _allResults.filter(r => r.isQLBH).length;
   const datTarget = _allResults.filter(r => r.tyleTong >= 1.0).length;
-  const datSpCd   = cdMaSP ? _allResults.filter(r => r.datSpCd === true).length : null;
+  const datSpCd   = cdMaSPStr ? _allResults.filter(r => r.datSpCd === true).length : null;
 
   html += `<div class="summary-bar">
     <span>Tổng: <b>${totalRows}</b> nhân viên</span>
     <span>QLBH: <b>${qlbhRows}</b> · TDV/CTV: <b>${totalRows - qlbhRows}</b></span>
     <span class="c-good">Đạt target DS: <b>${datTarget}</b></span>
     <span class="c-bad">Chưa đạt: <b>${totalRows - datTarget}</b></span>
-    ${datSpCd !== null ? `<span class="c-good">Đạt SP CĐ (<b>${cdMaSP}</b>): <b>${datSpCd}</b></span>` : ''}
+    ${datSpCd !== null ? `<span class="c-good">Đạt SP CĐ (<b>${cdMaSPStr}</b>): <b>${datSpCd}</b></span>` : ''}
   </div>`;
 
   return html;
@@ -299,7 +302,7 @@ function clearFilters() {
 function exportToExcel(results, dpkhDetail, dpmhDetail) {
   const wb   = XLSX.utils.book_new();
   const date = new Date().toLocaleDateString('vi-VN').replace(/\//g, '-');
-  const cdMaSP = (CONFIG.SP_CHI_DINH.maSP || '').trim();
+  const cdMaSPStr = (CONFIG.SP_CHI_DINH.maSP || '').trim();
 
   // ── Sheet 1: Tính Thưởng ─────────────────────────────────
   const hdrs = [
@@ -309,7 +312,7 @@ function exportToExcel(results, dpkhDetail, dpmhDetail) {
     'DS N15','ĐPKH Thực','ĐPMH Thực',
     '% DS N2','% DS N3','% DS Tổng','% DS Tổng+CT','% ĐPKH','% ĐPMH','% DS N15',
     'PTML','% Đạt N2','Hs ảnh hưởng N1','HSHT','Hs KH CT',
-    ...(cdMaSP ? [`SL ${cdMaSP}`, `Đạt ${cdMaSP}`] : []),
+    ...(cdMaSPStr ? [`SL ${cdMaSPStr}`, `KH phủ ${cdMaSPStr}`, `Đạt ${cdMaSPStr}`] : []),
   ];
   const rows1 = [hdrs, ...results.map(r => [
     r.maTDV, r.tenTDV, r.khuVuc, r.mien, r.qlbh, r.doiTuong,
@@ -318,7 +321,7 @@ function exportToExcel(results, dpkhDetail, dpmhDetail) {
     r.dsDay15, r.dpkh, r.dpmh,
     r.tyLeN2, r.tyLeN3, r.tyleTong, r.tyleTongCT, r.tyleDPKH, r.tyleDPMH, r.tyLeDay15,
     r.ptml, r.pctDatN2, r.hsAnhHuongN1, r.hsht, r.hsKhCT,
-    ...(cdMaSP ? [r.soLuongSpCd || 0, r.datSpCd ? 'Đạt' : 'Chưa đạt'] : []),
+    ...(cdMaSPStr ? [r.soLuongSpCd || 0, r.dpkhSpCd || 0, r.datSpCd ? 'Đạt' : 'Chưa đạt'] : []),
   ])];
 
   const ws1 = XLSX.utils.aoa_to_sheet(rows1);
@@ -380,8 +383,8 @@ function _applyPctFormat(ws, colIndices, rowCount) {
 // ============================================================
 
 const _METRICS = [
-  { key:'tyleTong',  label:'Doanh số tổng',   icon:'💰', unit:'',
-    detail: r => `${_p(r.tyleTong)} · còn thiếu ${_m(Math.max(0, r.dsTongTarget - r.dsTong))}` },
+  { key:'tyleTongCT', label:'Doanh số T+CT',   icon:'💰', unit:'',
+    detail: r => `${_p(r.tyleTongCT)} · còn thiếu ${_m(Math.max(0, r.dsTongTarget - r.dsTongCT))}` },
   { key:'tyLeN2',    label:'DS Nhóm 2',        icon:'📦', unit:'',
     detail: r => `${_p(r.tyLeN2)} · còn thiếu ${_m(Math.max(0, r.dsN2Target - r.dsN2))}` },
   { key:'tyleDPKH',  label:'ĐPKH',             icon:'👥', unit:'KH',
@@ -401,7 +404,7 @@ function _m(v) {
 function _p(v) { return (+(v*100)).toFixed(1) + '%'; }
 
 function _buildMotivation(grp) {
-  const totalDS     = grp.reduce((s, r) => s + (r.dsTong || 0), 0);
+  const totalDS     = grp.reduce((s, r) => s + (r.dsTongCT || 0), 0);
   const totalTarget = grp.reduce((s, r) => s + (r.dsTongTarget || 0), 0);
   const gap         = Math.max(0, totalTarget - totalDS);
   const pct         = totalTarget > 0 ? totalDS / totalTarget : 0;
@@ -420,7 +423,7 @@ function _buildMotivation(grp) {
 }
 
 function _buildMotivationText(grp) {
-  const totalDS     = grp.reduce((s, r) => s + (r.dsTong || 0), 0);
+  const totalDS     = grp.reduce((s, r) => s + (r.dsTongCT || 0), 0);
   const totalTarget = grp.reduce((s, r) => s + (r.dsTongTarget || 0), 0);
   const gap         = Math.max(0, totalTarget - totalDS);
   const pct         = totalTarget > 0 ? totalDS / totalTarget : 0;

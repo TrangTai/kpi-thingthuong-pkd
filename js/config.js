@@ -95,6 +95,7 @@ const CONFIG = {
   SP_CHI_DINH: {
     maSP: '',
     soLuongTarget: 0,
+    dpkhSpCdTarget: 0,
   },
 
 };

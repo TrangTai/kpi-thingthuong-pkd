@@ -445,6 +445,8 @@ function initFormulaPanel() {
   if (spMaSP) spMaSP.value = CONFIG.SP_CHI_DINH.maSP || '';
   const spSL = document.getElementById('spcd-soluong');
   if (spSL) spSL.value = CONFIG.SP_CHI_DINH.soLuongTarget || 0;
+  const spDPKH = document.getElementById('spcd-dpkh');
+  if (spDPKH) spDPKH.value = CONFIG.SP_CHI_DINH.dpkhSpCdTarget || 0;
 }
 
 function applyFormulaConfig() {
@@ -479,6 +481,8 @@ function applyFormulaConfig() {
   if (spMaSP) CONFIG.SP_CHI_DINH.maSP = spMaSP.value.trim();
   const spSL = document.getElementById('spcd-soluong');
   if (spSL) CONFIG.SP_CHI_DINH.soLuongTarget = parseInt(spSL.value) || 0;
+  const spDPKH = document.getElementById('spcd-dpkh');
+  if (spDPKH) CONFIG.SP_CHI_DINH.dpkhSpCdTarget = parseInt(spDPKH.value) || 0;
 
   try {
     localStorage.setItem(SK.config, JSON.stringify({
@@ -486,7 +490,7 @@ function applyFormulaConfig() {
       DS_N2_RATIO:  CONFIG.DS_N2_RATIO,
       DS_N3_RATIO:  CONFIG.DS_N3_RATIO,
       MIN_DS_PHU:   CONFIG.MIN_DS_PHU,
-      SP_CHI_DINH:  { maSP: CONFIG.SP_CHI_DINH.maSP, soLuongTarget: CONFIG.SP_CHI_DINH.soLuongTarget },
+      SP_CHI_DINH:  { maSP: CONFIG.SP_CHI_DINH.maSP, soLuongTarget: CONFIG.SP_CHI_DINH.soLuongTarget, dpkhSpCdTarget: CONFIG.SP_CHI_DINH.dpkhSpCdTarget },
     }));
   } catch(e) {}
 
@@ -516,8 +520,9 @@ function loadConfigFromStorage() {
     if (s.DS_N3_RATIO  !== undefined) CONFIG.DS_N3_RATIO  = s.DS_N3_RATIO;
     if (s.MIN_DS_PHU   !== undefined) CONFIG.MIN_DS_PHU   = s.MIN_DS_PHU;
     if (s.SP_CHI_DINH) {
-      if (s.SP_CHI_DINH.maSP          !== undefined) CONFIG.SP_CHI_DINH.maSP          = s.SP_CHI_DINH.maSP;
-      if (s.SP_CHI_DINH.soLuongTarget !== undefined) CONFIG.SP_CHI_DINH.soLuongTarget = s.SP_CHI_DINH.soLuongTarget;
+      if (s.SP_CHI_DINH.maSP            !== undefined) CONFIG.SP_CHI_DINH.maSP            = s.SP_CHI_DINH.maSP;
+      if (s.SP_CHI_DINH.soLuongTarget   !== undefined) CONFIG.SP_CHI_DINH.soLuongTarget   = s.SP_CHI_DINH.soLuongTarget;
+      if (s.SP_CHI_DINH.dpkhSpCdTarget  !== undefined) CONFIG.SP_CHI_DINH.dpkhSpCdTarget  = s.SP_CHI_DINH.dpkhSpCdTarget;
     }
   } catch(e) {}
 }

@@ -109,13 +109,24 @@ function calculateKPI(allOrders, targets) {
 
     // ─── SP chỉ định ─────────────────────────────────────────
     let soLuongSpCd = 0;
-    const cdMaSP = (CONFIG.SP_CHI_DINH.maSP || '').trim();
-    if (cdMaSP) {
+    let dpkhSpCd = 0;
+    const cdMaSPStr = (CONFIG.SP_CHI_DINH.maSP || '').trim();
+    const cdMaSPSet = cdMaSPStr
+      ? new Set(cdMaSPStr.split(',').map(s => s.trim()).filter(Boolean))
+      : null;
+    if (cdMaSPSet && cdMaSPSet.size > 0) {
+      const khSet = new Set();
       for (const o of allOrders) {
-        if (o.maSP === cdMaSP && belongsTo(o)) soLuongSpCd += (o.soLuong || 0);
+        if (cdMaSPSet.has(o.maSP) && belongsTo(o)) {
+          soLuongSpCd += (o.soLuong || 0);
+          khSet.add(o.maKH);
+        }
       }
+      dpkhSpCd = khSet.size;
     }
-    const datSpCd = cdMaSP ? (soLuongSpCd >= CONFIG.SP_CHI_DINH.soLuongTarget) : null;
+    const datSpCd = cdMaSPSet && cdMaSPSet.size > 0
+      ? (soLuongSpCd >= CONFIG.SP_CHI_DINH.soLuongTarget && dpkhSpCd >= CONFIG.SP_CHI_DINH.dpkhSpCdTarget)
+      : null;
 
     // ─── Bước 5: Tỷ lệ hoàn thành ───────────────────────────
     const dsN2Target   = target.dsTongTarget * CONFIG.DS_N2_RATIO;
@@ -159,7 +170,7 @@ function calculateKPI(allOrders, targets) {
       dsDay15, tyLeDay15,
       tyLeN2, tyLeN3, tyleTong, tyleTongCT, tyleDPKH, tyleDPMH,
       ptml, pctDatN2, hsAnhHuongN1, hsht, hsKhCT,
-      soLuongSpCd, datSpCd,
+      soLuongSpCd, dpkhSpCd, datSpCd,
       isQLBH, numSubs,
     });
   }
