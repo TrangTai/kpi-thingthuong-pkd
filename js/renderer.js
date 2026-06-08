@@ -91,8 +91,8 @@ function renderTable(results) {
     // TỔNG HỢP KPI (4)
     { text: 'PTML',            cls: 'h-kpi',    nf: 'ptml',    ph: '>=60',  key: r => r.ptml,         fmt: 'pct', scale: 100, compact: true, tip: '%N3×10% + %DS Tổng×0% + %DS Tổng+CT×60% + %ĐPKH×15% + %ĐPMH×15%' },
     { text: 'Hs N1',           cls: 'h-kpi',    nf: 'hn1',     ph: '>=0.8', key: r => r.hsAnhHuongN1, fmt: 'hs',  compact: true, tip: 'Hs ảnh hưởng N1: <60%→0.7 | 60%→0.8 | 80%→0.9 | ≥100%→1.0 (lookup theo % DS N2)' },
-    { text: 'HSHT',            cls: 'h-kpi',    nf: 'hsht',    ph: '>=1',   key: r => r.hsht,         fmt: 'hs',  compact: true, tip: 'TDV: 0%→0|60%→0.6|80%→0.8|100%→1.0|115%→1.1|125%→1.2|135%→1.3\nQLBH: 0%→0|60%→0.5|80%→0.65|90%→0.8|100%→1.0|110%→1.28|120%→1.5' },
-    { text: 'Hs KH CT',        cls: 'h-kpi',    nf: 'hsct',    ph: '>=0.8', key: r => r.hsKhCT,       fmt: 'hs',  compact: true, tip: 'DS CT=0→1.0 | ≥200M→0.8 | ≥400M→0.7' },
+    { text: 'HSHT',            cls: 'h-kpi',    nf: 'hsht',    ph: '>=1',   key: r => r.hsht,         fmt: 'hs',  compact: true, tip: 'Lookup theo % DS T+CT\nTDV: 0%→0|60%→0.6|80%→0.8|100%→1.0|115%→1.1|125%→1.2|135%→1.3\nQLBH: 0%→0|60%→0.5|80%→0.65|90%→0.8|100%→1.0|110%→1.28|120%→1.5' },
+    { text: 'Hs KH CT',        cls: 'h-kpi',    nf: 'hsct',    ph: '>=0.8', key: r => r.hsKhCT,       fmt: 'hs',  compact: true, tip: 'HSHT < 1 → Hs KH CT = HSHT\nHSHT ≥ 1 → lookup DS công ty: =0→1.0 | ≥200M→0.8 | ≥400M→0.7' },
     // SP CHỈ ĐỊNH (3)
     { text: 'SL SP CĐ',        cls: 'h-spcd',   nf: 'slspcd',  ph: '>=5',   key: r => r.soLuongSpCd || 0, fmt: 'num', compact: true, tip: `Tổng số hộp ${cdMaSPStr || 'SP chỉ định'} đã bán` },
     { text: 'KH phủ SP CĐ',    cls: 'h-spcd',   nf: 'khspcd',  ph: '>=5',   key: r => r.dpkhSpCd || 0, fmt: 'num', compact: true, tip: `Số KH mua ít nhất 1 trong các mã ${cdMaSPStr || 'SP chỉ định'}` },

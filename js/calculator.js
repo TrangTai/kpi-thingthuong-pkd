@@ -160,7 +160,8 @@ function calculateKPI(allOrders, targets) {
 
     // ─── Bước 8: HSHT, hệ số KH CT ──────────────────────────
     const hsht   = isQLBH ? getHshtQLBH(tyleTongCT) : getHshtTDV(tyleTongCT);
-    const hsKhCT = getHsKhCongTy(Math.abs(dsCongTy));
+    // HSHT < 1: Hs KH CT = HSHT | HSHT ≥ 1: lookup DS công ty (1.0 → 0.8 → 0.7)
+    const hsKhCT = hsht < 1 ? hsht : getHsKhCongTy(Math.abs(dsCongTy));
 
     results.push({
       maTDV: tdv, tenTDV: target.tenTDV, khuVuc: target.khuVuc,
