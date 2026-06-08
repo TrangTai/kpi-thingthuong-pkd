@@ -149,10 +149,10 @@ function calculateKPI(allOrders, targets) {
     for (let i = 0; i < CONFIG.PTML_WEIGHTS.length; i++) ptml += ratios[i] * CONFIG.PTML_WEIGHTS[i];
 
     // ─── Bước 7: % đạt N2 ────────────────────────────────────
-    // DS Tổng < 100%: DS N2 / (DS Tổng × 50%) | ≥100%: DS N2 / DS N2 Target
+    // DS T+CT < 100%: DS N2 / (DS T+CT × 50%) | ≥100%: DS N2 / DS N2 Target
     let pctDatN2;
-    if (tyleTong < 1.0) {
-      pctDatN2 = dsTong > 0 ? dsN2 / (dsTong * 0.5) : 0;
+    if (tyleTongCT < 1.0) {
+      pctDatN2 = dsTongCT > 0 ? dsN2 / (dsTongCT * 0.5) : 0;
     } else {
       pctDatN2 = dsN2Target > 0 ? dsN2 / dsN2Target : 0;
     }
