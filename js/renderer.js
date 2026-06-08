@@ -59,7 +59,7 @@ function renderTable(results) {
     { text: 'KẾ HOẠCH',           span: 5, cls: 'h-plan'   },
     { text: 'HOÀN THÀNH',         span: 7, cls: 'h-actual' },
     { text: 'TỶ LỆ HOÀN THÀNH',  span: 7, cls: 'h-ratio'  },
-    { text: 'TỔNG HỢP KPI',       span: 5, cls: 'h-kpi'   },
+    { text: 'TỔNG HỢP KPI',       span: 4, cls: 'h-kpi'   },
     { text: cdLabel,               span: 3, cls: 'h-spcd'  },
   ];
 
@@ -81,17 +81,16 @@ function renderTable(results) {
     { text: 'ĐPKH',           cls: 'h-actual', nf: 'dpkh',    ph: '>=',  key: r => r.dpkh,         fmt: 'num',  compact: true, tip: 'Số KH có DS ≥ 500.000đ (gồm KH CT)' },
     { text: 'ĐPMH',           cls: 'h-actual', nf: 'dpmh',    ph: '>=',  key: r => r.dpmh,         fmt: 'num',  compact: true, tip: 'Số MH có DS ≥ 500.000đ × số TDV (nhóm TP026/027/030, TB011-018 gộp)' },
     // TỶ LỆ (7)
-    { text: '% DS N2',         cls: 'h-ratio',  nf: 'pn2',     ph: '>=60',  key: r => r.tyLeN2,       fmt: 'pct', scale: 100, compact: true, tip: 'DS N2 / DS N2 Target (50% khoán)' },
+    { text: '% DS N2',         cls: 'h-ratio',  nf: 'pn2',     ph: '>=60',  key: r => r.pctDatN2,     fmt: 'pct', scale: 100, compact: true, tip: 'DS Tổng<100%: DS N2/(DS Tổng×50%) | DS Tổng≥100%: DS N2/DS N2 Target' },
     { text: '% DS N3',         cls: 'h-ratio',  nf: 'pn3',     ph: '>=60',  key: r => r.tyLeN3,       fmt: 'pct', scale: 100, compact: true, tip: 'DS N3 / DS N3 Target (8% khoán)' },
     { text: '% DS Tổng',       cls: 'h-ratio',  nf: 'pton',    ph: '>=60',  key: r => r.tyleTong,     fmt: 'pct', scale: 100, compact: true, tip: 'DS Tổng / DS Tổng Target' },
     { text: '% DS T+CT',       cls: 'h-ratio',  nf: 'ptonct',  ph: '>=60',  key: r => r.tyleTongCT,   fmt: 'pct', scale: 100, compact: true, tip: 'DS Tổng+CT / DS Tổng Target' },
     { text: '% ĐPKH',          cls: 'h-ratio',  nf: 'pdpkh',   ph: '>=60',  key: r => r.tyleDPKH,     fmt: 'pct', scale: 100, compact: true, tip: 'ĐPKH / ĐPKH Target' },
     { text: '% ĐPMH',          cls: 'h-ratio',  nf: 'pdpmh',   ph: '>=60',  key: r => r.tyleDPMH,     fmt: 'pct', scale: 100, compact: true, tip: 'ĐPMH / ĐPMH Target' },
     { text: '% DS N15',        cls: 'h-ratio',  nf: 'pn15',    ph: '>=50',  key: r => r.tyLeDay15,    fmt: 'pct', scale: 100, compact: true, tip: 'DS N15 / DS Tổng Target' },
-    // TỔNG HỢP KPI (5)
+    // TỔNG HỢP KPI (4)
     { text: 'PTML',            cls: 'h-kpi',    nf: 'ptml',    ph: '>=60',  key: r => r.ptml,         fmt: 'pct', scale: 100, compact: true, tip: '%N3×10% + %DS Tổng×0% + %DS Tổng+CT×60% + %ĐPKH×15% + %ĐPMH×15%' },
-    { text: '% Đạt N2',        cls: 'h-kpi',    nf: 'datn2',   ph: '>=60',  key: r => r.pctDatN2,     fmt: 'pct', scale: 100, compact: true, tip: '= % DS N2 (dùng cho lookup Hs ảnh hưởng N1)' },
-    { text: 'Hs N1',           cls: 'h-kpi',    nf: 'hn1',     ph: '>=0.8', key: r => r.hsAnhHuongN1, fmt: 'hs',  compact: true, tip: 'Hs ảnh hưởng N1: <60%→0.7 | 60%→0.8 | 80%→0.9 | ≥100%→1.0' },
+    { text: 'Hs N1',           cls: 'h-kpi',    nf: 'hn1',     ph: '>=0.8', key: r => r.hsAnhHuongN1, fmt: 'hs',  compact: true, tip: 'Hs ảnh hưởng N1: <60%→0.7 | 60%→0.8 | 80%→0.9 | ≥100%→1.0 (lookup theo % DS N2)' },
     { text: 'HSHT',            cls: 'h-kpi',    nf: 'hsht',    ph: '>=1',   key: r => r.hsht,         fmt: 'hs',  compact: true, tip: 'TDV: 0%→0|60%→0.6|80%→0.8|100%→1.0|115%→1.1|125%→1.2|135%→1.3\nQLBH: 0%→0|60%→0.5|80%→0.65|90%→0.8|100%→1.0|110%→1.28|120%→1.5' },
     { text: 'Hs KH CT',        cls: 'h-kpi',    nf: 'hsct',    ph: '>=0.8', key: r => r.hsKhCT,       fmt: 'hs',  compact: true, tip: 'DS CT=0→1.0 | ≥200M→0.8 | ≥400M→0.7' },
     // SP CHỈ ĐỊNH (3)
@@ -311,7 +310,7 @@ function exportToExcel(results, dpkhDetail, dpmhDetail) {
     'DS N2 Thực','DS N3 Thực','DS Tổng Thực','DS Tổng+CT','DS Công ty',
     'DS N15','ĐPKH Thực','ĐPMH Thực',
     '% DS N2','% DS N3','% DS Tổng','% DS Tổng+CT','% ĐPKH','% ĐPMH','% DS N15',
-    'PTML','% Đạt N2','Hs ảnh hưởng N1','HSHT','Hs KH CT',
+    'PTML','Hs ảnh hưởng N1','HSHT','Hs KH CT',
     ...(cdMaSPStr ? [`SL ${cdMaSPStr}`, `KH phủ ${cdMaSPStr}`, `Đạt ${cdMaSPStr}`] : []),
   ];
   const rows1 = [hdrs, ...results.map(r => [
@@ -319,14 +318,14 @@ function exportToExcel(results, dpkhDetail, dpmhDetail) {
     r.dsN2Target, r.dsN3Target, r.dsTongTarget, r.dpkhTarget, r.dpmhTarget,
     r.dsN2, r.dsN3, r.dsTong, r.dsTongCT, r.dsCongTy,
     r.dsDay15, r.dpkh, r.dpmh,
-    r.tyLeN2, r.tyLeN3, r.tyleTong, r.tyleTongCT, r.tyleDPKH, r.tyleDPMH, r.tyLeDay15,
-    r.ptml, r.pctDatN2, r.hsAnhHuongN1, r.hsht, r.hsKhCT,
+    r.pctDatN2, r.tyLeN3, r.tyleTong, r.tyleTongCT, r.tyleDPKH, r.tyleDPMH, r.tyLeDay15,
+    r.ptml, r.hsAnhHuongN1, r.hsht, r.hsKhCT,
     ...(cdMaSPStr ? [r.soLuongSpCd || 0, r.dpkhSpCd || 0, r.datSpCd ? 'Đạt' : 'Chưa đạt'] : []),
   ])];
 
   const ws1 = XLSX.utils.aoa_to_sheet(rows1);
   _setColWidths(ws1, rows1[0].length);
-  _applyPctFormat(ws1, [19,20,21,22,23,24,25,26,27], rows1.length);
+  _applyPctFormat(ws1, [19,20,21,22,23,24,25,26], rows1.length);
   XLSX.utils.book_append_sheet(wb, ws1, 'Tính Thưởng');
 
   // ── Sheet 2: ĐPKH Chi tiết ───────────────────────────────
@@ -385,8 +384,8 @@ function _applyPctFormat(ws, colIndices, rowCount) {
 const _METRICS = [
   { key:'tyleTongCT', label:'Doanh số T+CT',   icon:'💰', unit:'',
     detail: r => `${_p(r.tyleTongCT)} · còn thiếu ${_m(Math.max(0, r.dsTongTarget - r.dsTongCT))}` },
-  { key:'tyLeN2',    label:'DS Nhóm 2',        icon:'📦', unit:'',
-    detail: r => `${_p(r.tyLeN2)} · còn thiếu ${_m(Math.max(0, r.dsN2Target - r.dsN2))}` },
+  { key:'pctDatN2',  label:'DS Nhóm 2',        icon:'📦', unit:'',
+    detail: r => `${_p(r.pctDatN2)} · còn thiếu N2 ${_m(Math.max(0, r.dsN2Target - r.dsN2))}` },
   { key:'tyleDPKH',  label:'ĐPKH',             icon:'👥', unit:'KH',
     detail: r => `${_p(r.tyleDPKH)} · thiếu ${Math.max(0, r.dpkhTarget - r.dpkh)} KH` },
   { key:'tyleDPMH',  label:'ĐPMH',             icon:'🏪', unit:'MH',
