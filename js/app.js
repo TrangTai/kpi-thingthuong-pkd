@@ -14,7 +14,7 @@ const SK = {
 };
 
 const uploadedFiles = {
-  donHang: null, dhLon: null, target: null, dskh: null, bangGia: null, quy: null,
+  donHang: null, dhLon: null, target: null, dskh: null, bangGia: null, quy: null, donHangQLBH: null,
 };
 
 const staticData = {
@@ -37,12 +37,48 @@ const previewData = {
 
 // ─── Init ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  // Login keyboard shortcuts
+  document.getElementById('login-pass')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('login-user')?.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-pass')?.focus(); });
+
+  // Firebase auth observer — drives entire app startup
+  fbOnAuthChange(async user => {
+    if (user) {
+      try {
+        const userDoc = await fbGetUserDoc(user.uid);
+        if (!userDoc) { await fbLogout(); showLoginError('Tài khoản chưa được cấp quyền. Liên hệ admin.'); return; }
+        showApp(userDoc);
+      } catch(e) { showLoginError('Lỗi kết nối: ' + e.message); }
+    } else {
+      showLoginScreen();
+    }
+  });
+});
+
+function showLoginScreen() {
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app-main').style.display = 'none';
+}
+
+function showApp(userDoc) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-main').style.display = '';
+  document.getElementById('user-bar-name').textContent = userDoc.tenTDV || userDoc.maTDV;
+  document.getElementById('user-bar-role').textContent = userDoc.role === 'admin' ? 'Admin' : 'Quản lý BH';
+  if (userDoc.role === 'admin') initAdminApp();
+  else initQLBHApp(userDoc);
+}
+
+function initAdminApp() {
+  document.getElementById('btn-save-cloud').style.display    = 'inline-block';
+  document.getElementById('btn-create-accounts').style.display = 'inline-block';
+
   setupFileInput('input-don-hang', 'badge-don-hang', 'label-don-hang', f => { uploadedFiles.donHang = f; });
-  setupFileInput('input-dh-lon',   'badge-dh-lon',   'label-dh-lon',   f => { uploadedFiles.dhLon   = f; onStaticUpload('dhLon', f, parseDhLon, SK.dhLon, 'dhLonOrders'); }, false);
-  setupFileInput('input-target',   'badge-target',   'label-target',   f => { uploadedFiles.target  = f; onStaticUpload('target', f, parseTarget, SK.target, 'targets'); }, false);
-  setupFileInput('input-dskh',     'badge-dskh',     'label-dskh',     f => { uploadedFiles.dskh    = f; onStaticUpload('dskh', f, parseDSKHCongTy, SK.dskh, 'companyKhMap'); }, false);
-  setupFileInput('input-bang-gia', 'badge-bang-gia', 'label-bang-gia', f => { uploadedFiles.bangGia = f; onStaticUpload('bangGia', f, parseBangGia, SK.bangGia, 'bangGiaMap'); }, false);
-  setupFileInput('input-quy', 'badge-quy', 'label-quy', f => { uploadedFiles.quy = f; onStaticUpload('quy', f, parseQuyData, SK.quy, 'quyMap'); }, false);
+  setupFileInput('input-dh-lon',   'badge-dh-lon',   'label-dh-lon',   f => { uploadedFiles.dhLon   = f; onStaticUpload('dhLon',   f, parseDhLon,        SK.dhLon,   'dhLonOrders');   }, false);
+  setupFileInput('input-target',   'badge-target',   'label-target',   f => { uploadedFiles.target  = f; onStaticUpload('target',  f, parseTarget,       SK.target,  'targets');       }, false);
+  setupFileInput('input-dskh',     'badge-dskh',     'label-dskh',     f => { uploadedFiles.dskh    = f; onStaticUpload('dskh',    f, parseDSKHCongTy,   SK.dskh,    'companyKhMap'); }, false);
+  setupFileInput('input-bang-gia', 'badge-bang-gia', 'label-bang-gia', f => { uploadedFiles.bangGia = f; onStaticUpload('bangGia', f, parseBangGia,      SK.bangGia, 'bangGiaMap');   }, false);
+  setupFileInput('input-quy',      'badge-quy',      'label-quy',      f => { uploadedFiles.quy     = f; onStaticUpload('quy',     f, parseQuyData,      SK.quy,     'quyMap');        }, false);
 
   document.getElementById('btn-calculate').addEventListener('click', onCalculate);
   document.getElementById('btn-export').addEventListener('click', onExport);
@@ -53,7 +89,77 @@ document.addEventListener('DOMContentLoaded', () => {
   loadStaticFromStorage();
   loadResultsFromStorage();
   initFormulaPanel();
-});
+
+  fbLoadConfig().then(cfg => { if (cfg) applyConfigFromFirestore(cfg); }).catch(() => {});
+}
+
+async function initQLBHApp(userDoc) {
+  document.getElementById('upload-section').style.display  = 'none';
+  document.getElementById('action-bar').style.display      = 'none';
+  document.getElementById('formula-panel').style.display   = 'none';
+  document.querySelector('.tab-nav').style.display         = 'none';
+  document.getElementById('cloud-status-bar').style.display = '';
+  document.getElementById('qlbh-upload-section').style.display = '';
+
+  setupFileInput('input-don-hang-qlbh', 'badge-don-hang-qlbh', 'label-don-hang-qlbh', f => { uploadedFiles.donHangQLBH = f; });
+  document.getElementById('btn-qlbh-calculate')?.addEventListener('click', () => onQLBHCalculate(userDoc));
+
+  const statusEl = document.getElementById('cloud-status');
+  try {
+    const [meta, results, quyMap] = await Promise.all([fbLoadMeta(), fbLoadResults(userDoc.maTDV), fbLoadQuyMap()]);
+
+    if (meta) {
+      const ts = meta.savedAt?.toDate?.() || new Date();
+      const fmtDt = new Intl.DateTimeFormat('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+      if (statusEl) statusEl.innerHTML = `Dữ liệu từ Cloud · Cập nhật lần cuối: <b>${fmtDt.format(ts)}</b> · <b>${meta.label || ''}</b>`;
+    }
+
+    if (!results.length) {
+      document.getElementById('output').innerHTML = '<div style="padding:32px;text-align:center;color:#888;font-size:14px">Chưa có kết quả. Admin cần Tính Thưởng và nhấn Lưu Cloud.</div>';
+      return;
+    }
+
+    results.sort((a, b) => (b.isQLBH ? 1 : 0) - (a.isQLBH ? 1 : 0));
+    lastCalcData = { results, dpkhDetail: [], dpmhDetail: [] };
+    staticData.quyMap = quyMap;
+
+    renderOutput(results, `Nhóm: <b>${userDoc.tenTDV}</b> · <b>${results.length}</b> thành viên`, null);
+    renderPresentation(results);
+    document.getElementById('presentation-wrap').style.display = '';
+  } catch(err) {
+    if (statusEl) statusEl.textContent = 'Lỗi tải dữ liệu: ' + err.message;
+    console.error(err);
+  }
+}
+
+async function onQLBHCalculate(userDoc) {
+  if (!uploadedFiles.donHangQLBH) { alert('Vui lòng chọn file ĐƠN HÀNG trước.'); return; }
+  const btn = document.getElementById('btn-qlbh-calculate');
+  if (btn) { btn.disabled = true; btn.textContent = 'Đang tính...'; }
+  try {
+    const support      = await fbLoadSupportingData();
+    const targets      = support.targets      || staticData.targets;
+    const companyKhMap = support.companyKhMap || staticData.companyKhMap || {};
+    const bangGiaMap   = support.bangGiaMap   || staticData.bangGiaMap   || {};
+    if (!targets) { alert('Chưa có TARGET từ Cloud. Liên hệ admin.'); return; }
+
+    const donHangOrders = await parseDonHangKinhDoanh(uploadedFiles.donHangQLBH);
+    let allOrders = [...donHangOrders];
+    enrichOrdersWithBangGia(allOrders, bangGiaMap);
+    enrichOrders(allOrders, companyKhMap);
+    const { results } = calculateKPI(allOrders, targets);
+    const filtered = results.filter(r => r.qlbhCode === userDoc.maTDV);
+    filtered.sort((a, b) => (b.isQLBH ? 1 : 0) - (a.isQLBH ? 1 : 0));
+    lastCalcData = { results: filtered, dpkhDetail: [], dpmhDetail: [] };
+    staticData.quyMap = await fbLoadQuyMap();
+    renderOutput(filtered, `Nhóm: <b>${userDoc.tenTDV}</b> · Tính thử từ file ĐƠN HÀNG`, new Date());
+    renderPresentation(filtered);
+  } catch(err) {
+    alert('Lỗi: ' + err.message); console.error(err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Tính thử'; }
+  }
+}
 
 // ─── File input setup ────────────────────────────────────────
 function setupFileInput(inputId, badgeId, labelId, onLoad, isMain = true) {
@@ -567,4 +673,109 @@ function loadConfigFromStorage() {
       if (s.QUY_CONFIG.thang3  !== undefined) CONFIG.QUY_CONFIG.thang3   = s.QUY_CONFIG.thang3;
     }
   } catch(e) {}
+}
+
+// ─── Firebase auth UI ────────────────────────────────────────
+async function doLogin() {
+  const username = (document.getElementById('login-user')?.value || '').trim();
+  const password = document.getElementById('login-pass')?.value || '';
+  if (!username || !password) { showLoginError('Vui lòng nhập tên đăng nhập và mật khẩu.'); return; }
+  showLoginError('');
+  const btn = document.getElementById('btn-login');
+  if (btn) { btn.disabled = true; btn.textContent = 'Đang đăng nhập...'; }
+  try {
+    await fbLogin(username, password, document.getElementById('login-remember')?.checked || false);
+  } catch(err) {
+    let msg = 'Đăng nhập thất bại. Kiểm tra lại tên đăng nhập và mật khẩu.';
+    if (['auth/user-not-found','auth/wrong-password','auth/invalid-credential'].includes(err.code)) msg = 'Sai tên đăng nhập hoặc mật khẩu.';
+    else if (err.code === 'auth/too-many-requests') msg = 'Quá nhiều lần thử. Vui lòng thử lại sau.';
+    showLoginError(msg);
+    if (btn) { btn.disabled = false; btn.textContent = 'ĐĂNG NHẬP'; }
+  }
+}
+
+async function doLogout() {
+  await fbLogout();
+  lastCalcData = null;
+  Object.keys(staticData).forEach(k => { staticData[k] = null; });
+  document.getElementById('output').innerHTML = '<div class="loading" style="color:#bbb">Upload file và nhấn <b>Tính Thưởng</b> để bắt đầu.</div>';
+}
+
+function showLoginError(msg) {
+  const el = document.getElementById('login-error');
+  if (el) el.textContent = msg;
+}
+
+function togglePassVisibility() {
+  const input = document.getElementById('login-pass');
+  const icon  = document.querySelector('.toggle-pass');
+  if (!input) return;
+  input.type = input.type === 'password' ? 'text' : 'password';
+  if (icon) icon.textContent = input.type === 'password' ? '👁' : '🙈';
+}
+
+// ─── Admin: Save to Cloud ────────────────────────────────────
+async function onSaveToCloud() {
+  if (!lastCalcData?.results?.length) { alert('Chưa có kết quả. Vui lòng Tính Thưởng trước.'); return; }
+  const btn = document.getElementById('btn-save-cloud');
+  btn.disabled = true; btn.textContent = '☁ Đang lưu...';
+  try {
+    const label = `${CONFIG.QUY_CONFIG.thang3}/${CONFIG.QUY_CONFIG.quyLabel.split('/')[1] || ''}`;
+    await fbSaveResults(
+      lastCalcData.results, staticData.quyMap || null, label,
+      staticData.targets, staticData.companyKhMap, staticData.bangGiaMap,
+    );
+    await fbSaveConfig({
+      PTML_WEIGHTS: CONFIG.PTML_WEIGHTS, DS_N2_RATIO: CONFIG.DS_N2_RATIO,
+      DS_N3_RATIO:  CONFIG.DS_N3_RATIO,  MIN_DS_PHU:  CONFIG.MIN_DS_PHU,
+      SP_CHI_DINH:  { maSP: CONFIG.SP_CHI_DINH.maSP, soLuongTarget: CONFIG.SP_CHI_DINH.soLuongTarget, dpkhSpCdTarget: CONFIG.SP_CHI_DINH.dpkhSpCdTarget },
+      QUY_CONFIG:   CONFIG.QUY_CONFIG,
+    });
+    btn.textContent = '☁ Đã lưu!';
+    setTimeout(() => { btn.textContent = '☁ Lưu Cloud'; btn.disabled = false; }, 3000);
+    alert(`Đã lưu ${lastCalcData.results.length} kết quả lên Cloud thành công!`);
+    return;
+  } catch(err) {
+    alert('Lỗi lưu Cloud: ' + err.message); console.error(err);
+  }
+  btn.disabled = false; btn.textContent = '☁ Lưu Cloud';
+}
+
+// ─── Admin: Create QLBH accounts ────────────────────────────
+async function onCreateAccounts() {
+  if (!staticData.targets) { alert('Chưa có dữ liệu TARGET. Upload file Target trước.'); return; }
+  if (!confirm('Tạo tài khoản cho tất cả QLBH trong file TARGET?\n\nTài khoản đã tồn tại sẽ giữ nguyên.\nMật khẩu mặc định: 123456')) return;
+  const btn = document.getElementById('btn-create-accounts');
+  btn.disabled = true; btn.textContent = '👥 Đang tạo...';
+  try {
+    const res     = await fbCreateQLBHAccounts(staticData.targets);
+    const created = res.filter(r => r.status === 'created').length;
+    const exists  = res.filter(r => r.status === 'exists').length;
+    const errors  = res.filter(r => r.status.startsWith('lỗi')).length;
+    const detail  = res.map(r => `${r.maTDV} (${r.tenTDV}): ${r.status === 'created' ? '✓ Tạo mới' : r.status === 'exists' ? '○ Đã có' : '✗ ' + r.status}`).join('\n');
+    alert(`Hoàn thành!\n✓ Tạo mới: ${created}\n○ Đã tồn tại: ${exists}\n✗ Lỗi: ${errors}\n\n${detail}`);
+  } catch(err) {
+    alert('Lỗi: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '👥 Tạo TK QLBH';
+  }
+}
+
+function applyConfigFromFirestore(cfg) {
+  if (Array.isArray(cfg.PTML_WEIGHTS) && cfg.PTML_WEIGHTS.length === CONFIG.PTML_WEIGHTS.length) CONFIG.PTML_WEIGHTS = cfg.PTML_WEIGHTS;
+  if (cfg.DS_N2_RATIO !== undefined) CONFIG.DS_N2_RATIO = cfg.DS_N2_RATIO;
+  if (cfg.DS_N3_RATIO !== undefined) CONFIG.DS_N3_RATIO = cfg.DS_N3_RATIO;
+  if (cfg.MIN_DS_PHU  !== undefined) CONFIG.MIN_DS_PHU  = cfg.MIN_DS_PHU;
+  if (cfg.SP_CHI_DINH) {
+    if (cfg.SP_CHI_DINH.maSP            !== undefined) CONFIG.SP_CHI_DINH.maSP            = cfg.SP_CHI_DINH.maSP;
+    if (cfg.SP_CHI_DINH.soLuongTarget   !== undefined) CONFIG.SP_CHI_DINH.soLuongTarget   = cfg.SP_CHI_DINH.soLuongTarget;
+    if (cfg.SP_CHI_DINH.dpkhSpCdTarget  !== undefined) CONFIG.SP_CHI_DINH.dpkhSpCdTarget  = cfg.SP_CHI_DINH.dpkhSpCdTarget;
+  }
+  if (cfg.QUY_CONFIG) {
+    if (cfg.QUY_CONFIG.quyLabel !== undefined) CONFIG.QUY_CONFIG.quyLabel = cfg.QUY_CONFIG.quyLabel;
+    if (cfg.QUY_CONFIG.thang1   !== undefined) CONFIG.QUY_CONFIG.thang1   = cfg.QUY_CONFIG.thang1;
+    if (cfg.QUY_CONFIG.thang2   !== undefined) CONFIG.QUY_CONFIG.thang2   = cfg.QUY_CONFIG.thang2;
+    if (cfg.QUY_CONFIG.thang3   !== undefined) CONFIG.QUY_CONFIG.thang3   = cfg.QUY_CONFIG.thang3;
+  }
+  initFormulaPanel();
 }

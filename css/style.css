@@ -874,3 +874,90 @@ th[title]:not([title=""]) { cursor: help; }
 /* Legend dots */
 .ac-legend-row { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; color: var(--gray-400); font-weight: 400; margin-left: 4px; }
 .ac-leg-dot    { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+
+/* ============================================================
+   AUTH STYLES
+   ============================================================ */
+
+/* Login Screen */
+#login-screen {
+  position: fixed; inset: 0; z-index: 9999;
+  background: linear-gradient(145deg, #071e45 0%, #0d3683 50%, #1a5fbf 100%);
+  display: flex; align-items: center; justify-content: center;
+}
+.login-card {
+  background: #fff; border-radius: 16px; padding: 40px 44px;
+  width: 420px; max-width: 95vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+}
+.login-logo-row { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+.login-logo-circle {
+  width: 46px; height: 46px; border-radius: 10px;
+  background: linear-gradient(135deg, #0057A8, #2DB8E8);
+  color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 900; flex-shrink: 0;
+}
+.login-brand { font-size: 20px; font-weight: 800; color: #0057A8; letter-spacing: 1px; }
+.login-brand-sub { font-size: 11px; color: #999; margin-top: 2px; }
+.login-title {
+  font-size: 13px; font-weight: 600; color: #1a3a6b; margin-bottom: 24px;
+  text-align: center; background: #EBF4FC; padding: 10px 16px; border-radius: 8px;
+}
+.login-field { margin-bottom: 16px; }
+.login-field label { font-size: 11px; font-weight: 700; color: #555; display: block; margin-bottom: 6px; letter-spacing: 0.5px; }
+.login-input-wrap { position: relative; }
+.login-input-wrap input {
+  width: 100%; padding: 11px 40px 11px 14px;
+  border: 1.5px solid #dde3f0; border-radius: 8px;
+  font-size: 14px; font-family: inherit; color: #222;
+  outline: none; transition: border-color 0.2s; box-sizing: border-box;
+}
+.login-input-wrap input:focus { border-color: #0057A8; box-shadow: 0 0 0 3px rgba(0,87,168,0.1); }
+.login-inp-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 15px; color: #bbb; }
+.toggle-pass:hover { color: #888; }
+.login-remember { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #555; margin-bottom: 16px; cursor: pointer; }
+.login-remember input { cursor: pointer; }
+.login-error { font-size: 12px; color: #D93B3B; min-height: 18px; margin-bottom: 8px; }
+.login-btn {
+  width: 100%; padding: 13px; background: linear-gradient(90deg, #0057A8, #1a78d4);
+  color: #fff; border: none; border-radius: 8px;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  letter-spacing: 1.5px; transition: opacity 0.2s;
+}
+.login-btn:hover { opacity: 0.9; }
+.login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.login-footer { font-size: 11px; color: #ccc; text-align: center; margin-top: 18px; }
+
+/* User Bar */
+#user-bar {
+  background: linear-gradient(90deg, #071e45 0%, #0d3683 100%);
+  color: #fff; display: flex; align-items: center; padding: 6px 16px; gap: 10px;
+}
+.user-bar-info { display: flex; align-items: center; gap: 8px; flex: 1; font-size: 13px; }
+#user-bar-name { font-weight: 600; }
+.user-bar-role {
+  background: rgba(255,255,255,0.18); padding: 2px 10px;
+  border-radius: 10px; font-size: 11px;
+}
+.user-bar-logout {
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
+  color: #fff; padding: 4px 14px; border-radius: 6px; cursor: pointer;
+  font-size: 12px; transition: background 0.2s;
+}
+.user-bar-logout:hover { background: rgba(255,255,255,0.22); }
+
+/* Cloud / Account buttons */
+.btn-cloud { background: #00A651; color: #fff; border: none; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: background 0.2s; }
+.btn-cloud:hover { background: #008B43; }
+.btn-cloud:disabled { background: #aaa; cursor: not-allowed; }
+.btn-accounts { background: #7048E8; color: #fff; border: none; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: background 0.2s; }
+.btn-accounts:hover { background: #5c3ac4; }
+.btn-accounts:disabled { background: #aaa; cursor: not-allowed; }
+
+/* QLBH upload section */
+#qlbh-upload-section {
+  background: #f0f7ff; border: 1px solid #ADD0F1; border-radius: 8px;
+  padding: 14px 20px; margin: 10px 16px;
+}
+#qlbh-upload-section h3 { font-size: 13px; color: #0057A8; margin-bottom: 12px; }
+.qlbh-upload-row { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }

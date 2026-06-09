@@ -163,6 +163,9 @@ function calculateKPI(allOrders, targets) {
     // HSHT < 1: Hs KH CT = HSHT | HSHT ≥ 1: lookup DS công ty (1.0 → 0.8 → 0.7)
     const hsKhCT = hsht < 1 ? hsht : getHsKhCongTy(Math.abs(dsCongTy));
 
+    const qlbhRef  = (target.qlbh || '').trim();
+    const qlbhCode = isQLBH ? tdv : (qlbhByName[qlbhRef.toLowerCase()] || qlbhByCode[qlbhRef] || '');
+
     results.push({
       maTDV: tdv, tenTDV: target.tenTDV, khuVuc: target.khuVuc,
       mien: target.mien, qlbh: target.qlbh, doiTuong: target.doiTuong,
@@ -172,7 +175,7 @@ function calculateKPI(allOrders, targets) {
       tyLeN2, tyLeN3, tyleTong, tyleTongCT, tyleDPKH, tyleDPMH,
       ptml, pctDatN2, hsAnhHuongN1, hsht, hsKhCT,
       soLuongSpCd, dpkhSpCd, datSpCd,
-      isQLBH, numSubs,
+      isQLBH, numSubs, qlbhCode,
     });
   }
 
