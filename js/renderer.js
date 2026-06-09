@@ -39,7 +39,7 @@ function colorClass(ratio) {
 
 let _allResults = [];
 
-function renderTable(results) {
+function renderTable(results, quyMap) {
   _allResults = results || [];
   if (!_allResults.length) return '<p style="color:#888;padding:20px">Không có dữ liệu.</p>';
 
@@ -47,6 +47,11 @@ function renderTable(results) {
   const cdLabel = cdMaSPStr
     ? `SP CĐ: ${cdMaSPStr} (≥${CONFIG.SP_CHI_DINH.soLuongTarget} hộp · ≥${CONFIG.SP_CHI_DINH.dpkhSpCdTarget} KH)`
     : 'SP chỉ định';
+
+  const qc  = CONFIG.QUY_CONFIG;
+  const _qd = r => (quyMap && quyMap[r.maTDV]) || { t1Target:0, t2Target:0, t1Thuc:0, t2Thuc:0 };
+  const _qt = r => { const d=_qd(r); return d.t1Target + d.t2Target + r.dsTongTarget; };
+  const _qh = r => { const d=_qd(r); return d.t1Thuc   + d.t2Thuc   + r.dsTongCT;     };
 
   // ── Header row 1 (group headers) ──────────────────────────
   const groups = [
@@ -61,6 +66,12 @@ function renderTable(results) {
     { text: 'TỶ LỆ HOÀN THÀNH',  span: 7, cls: 'h-ratio'  },
     { text: 'TỔNG HỢP KPI',       span: 4, cls: 'h-kpi'   },
     { text: cdLabel,               span: 3, cls: 'h-spcd'  },
+    ...(quyMap ? [
+      { text: `TARGET ${qc.quyLabel}`,     span: 4, cls: 'h-quy-target' },
+      { text: `HOÀN THÀNH ${qc.quyLabel}`, span: 4, cls: 'h-quy-actual' },
+      { text: `% ĐẠT ${qc.quyLabel}`,      span: 1, cls: 'h-quy-pct'   },
+      { text: 'DS CÒN LẠI ĐỂ ĐẠT MỨC',   span: 4, cls: 'h-quy-con'   },
+    ] : []),
   ];
 
   // ── Header row 2 + filter/data column definitions ─────────
@@ -97,6 +108,25 @@ function renderTable(results) {
     { text: 'SL SP CĐ',        cls: 'h-spcd',   nf: 'slspcd',  ph: '>=5',   key: r => r.soLuongSpCd || 0, fmt: 'num', compact: true, tip: `Tổng số hộp ${cdMaSPStr || 'SP chỉ định'} đã bán` },
     { text: 'KH phủ SP CĐ',    cls: 'h-spcd',   nf: 'khspcd',  ph: '>=5',   key: r => r.dpkhSpCd || 0, fmt: 'num', compact: true, tip: `Số KH mua ít nhất 1 trong các mã ${cdMaSPStr || 'SP chỉ định'}` },
     { text: 'Đạt SP CĐ',       cls: 'h-spcd',   nf: 'datspcd', ph: '>=1',   key: r => r.datSpCd === true ? 1 : 0, fmt: '_spcd', compact: true, tip: `Đạt khi ≥${CONFIG.SP_CHI_DINH.soLuongTarget} hộp VÀ ≥${CONFIG.SP_CHI_DINH.dpkhSpCdTarget} KH phủ` },
+    ...(quyMap ? [
+      // TARGET Quý (4)
+      { text: qc.thang1+' Target', cls:'h-quy-target', nf:'qt1t',  ph:'>=M', key:r=>{const d=_qd(r);return d.t1Target;},                          fmt:'vndC', compact:true, tip:'Target '+qc.thang1+' (import)' },
+      { text: qc.thang2+' Target', cls:'h-quy-target', nf:'qt2t',  ph:'>=M', key:r=>{const d=_qd(r);return d.t2Target;},                          fmt:'vndC', compact:true, tip:'Target '+qc.thang2+' (import)' },
+      { text: qc.thang3+' Target', cls:'h-quy-target', nf:'qt3t',  ph:'>=M', key:r=>r.dsTongTarget,                                               fmt:'vndC', compact:true, tip:'Target '+qc.thang3+' (từ TARGET tháng này)' },
+      { text: 'Tổng Target',       cls:'h-quy-target', nf:'qtott', ph:'>=M', key:r=>_qt(r),                                                       fmt:'vndC', compact:true, tip:'Tổng Target '+qc.quyLabel },
+      // HOÀN THÀNH Quý (4)
+      { text: qc.thang1,           cls:'h-quy-actual', nf:'qt1',   ph:'>=M', key:r=>{const d=_qd(r);return d.t1Thuc;},                            fmt:'vndC', compact:true, tip:'DS T+CT '+qc.thang1+' (import)' },
+      { text: qc.thang2,           cls:'h-quy-actual', nf:'qt2',   ph:'>=M', key:r=>{const d=_qd(r);return d.t2Thuc;},                            fmt:'vndC', compact:true, tip:'DS T+CT '+qc.thang2+' (import)' },
+      { text: qc.thang3,           cls:'h-quy-actual', nf:'qt3',   ph:'>=M', key:r=>r.dsTongCT,                                                   fmt:'vndC', compact:true, tip:'DS T+CT '+qc.thang3+' (tháng này)' },
+      { text: 'Tổng',              cls:'h-quy-actual', nf:'qtot',  ph:'>=M', key:r=>_qh(r),                                                       fmt:'vndC', compact:true, tip:'Tổng DS T+CT '+qc.quyLabel },
+      // % ĐẠT Quý (1)
+      { text: '% Đạt',             cls:'h-quy-pct',    nf:'qpct',  ph:'>=60',key:r=>{const tT=_qt(r);return tT>0?_qh(r)/tT:0;},                  fmt:'pct',  scale:100, compact:true, tip:'Tổng HT / Tổng Target '+qc.quyLabel },
+      // DS CÒN LẠI (4)
+      { text: 'Mức 100%',          cls:'h-quy-con',    nf:'qc100', ph:'>=M', key:r=>Math.max(0,_qt(r)*1.0-_qh(r)),                               fmt:'vndC', compact:true, tip:'Còn thiếu để đạt 100% '+qc.quyLabel },
+      { text: 'Mức 110%',          cls:'h-quy-con',    nf:'qc110', ph:'>=M', key:r=>Math.max(0,_qt(r)*1.1-_qh(r)),                               fmt:'vndC', compact:true, tip:'Còn thiếu để đạt 110% '+qc.quyLabel },
+      { text: 'Mức 120%',          cls:'h-quy-con',    nf:'qc120', ph:'>=M', key:r=>Math.max(0,_qt(r)*1.2-_qh(r)),                               fmt:'vndC', compact:true, tip:'Còn thiếu để đạt 120% '+qc.quyLabel },
+      { text: 'Mức 130%',          cls:'h-quy-con',    nf:'qc130', ph:'>=M', key:r=>Math.max(0,_qt(r)*1.3-_qh(r)),                               fmt:'vndC', compact:true, tip:'Còn thiếu để đạt 130% '+qc.quyLabel },
+    ] : []),
   ];
 
   let html = `
@@ -298,7 +328,7 @@ function clearFilters() {
 // EXPORT EXCEL
 // ============================================================
 
-function exportToExcel(results, dpkhDetail, dpmhDetail) {
+function exportToExcel(results, dpkhDetail, dpmhDetail, quyMap) {
   const wb   = XLSX.utils.book_new();
   const date = new Date().toLocaleDateString('vi-VN').replace(/\//g, '-');
   const cdMaSPStr = (CONFIG.SP_CHI_DINH.maSP || '').trim();
@@ -343,6 +373,34 @@ function exportToExcel(results, dpkhDetail, dpmhDetail) {
   ]);
   _setColWidths(ws3, 6);
   XLSX.utils.book_append_sheet(wb, ws3, 'ĐPMH Chi tiết');
+
+  // ── Sheet 5: Quý ─────────────────────────────────────────
+  if (quyMap) {
+    const qc = CONFIG.QUY_CONFIG;
+    const _qd = r => (quyMap[r.maTDV]) || { t1Target:0, t2Target:0, t1Thuc:0, t2Thuc:0 };
+    const hdrsQ = ['Mã TDV','Tên TDV',
+      qc.thang1+' Target', qc.thang2+' Target', qc.thang3+' Target', 'Tổng Target',
+      qc.thang1+' Thực',   qc.thang2+' Thực',   qc.thang3+' Thực',  'Tổng Thực',
+      '% Đạt '+qc.quyLabel, 'Còn 100%','Còn 110%','Còn 120%','Còn 130%',
+    ];
+    const rowsQ = [hdrsQ, ...results.map(r => {
+      const d = _qd(r);
+      const tT = d.t1Target + d.t2Target + r.dsTongTarget;
+      const tH = d.t1Thuc   + d.t2Thuc   + r.dsTongCT;
+      return [
+        r.maTDV, r.tenTDV,
+        d.t1Target, d.t2Target, r.dsTongTarget, tT,
+        d.t1Thuc,   d.t2Thuc,   r.dsTongCT,     tH,
+        tT > 0 ? tH/tT : 0,
+        Math.max(0,tT*1.0-tH), Math.max(0,tT*1.1-tH),
+        Math.max(0,tT*1.2-tH), Math.max(0,tT*1.3-tH),
+      ];
+    })];
+    const wsQ = XLSX.utils.aoa_to_sheet(rowsQ);
+    wsQ['!cols'] = [8,20,14,14,14,14, 14,14,14,14, 10,14,14,14,14].map(w=>({wch:w}));
+    _applyPctFormat(wsQ, [10], rowsQ.length);
+    XLSX.utils.book_append_sheet(wb, wsQ, 'Quý '+qc.quyLabel);
+  }
 
   // ── Sheet 4: Tổng DS ─────────────────────────────────────
   const ws4 = XLSX.utils.aoa_to_sheet([

@@ -98,6 +98,16 @@ const CONFIG = {
     dpkhSpCdTarget: 0,
   },
 
+  // ----------------------------------------------------------
+  // Cấu hình Quý (thay đổi mỗi quý)
+  // ----------------------------------------------------------
+  QUY_CONFIG: {
+    quyLabel: 'Q2/2026',
+    thang1: 'T04',
+    thang2: 'T05',
+    thang3: 'T06',
+  },
+
 };
 
 // Hàm VLOOKUP xấp xỉ (approximate match, sorted ascending)

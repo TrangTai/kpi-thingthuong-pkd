@@ -76,6 +76,16 @@
       <div class="upload-label" id="label-dskh">Không bắt buộc</div>
     </div>
 
+    <div class="upload-card">
+      <input type="file" id="input-quy" accept=".xlsx,.xls">
+      <div class="badge badge-pending" id="badge-quy">○</div>
+      <div class="upload-icon">📅</div>
+      <div class="upload-title">DỮ LIỆU QUÝ</div>
+      <div class="upload-desc">T1+T2 Target & Thực (DS T+CT)<br><small>Tự lưu, chỉ đổi khi cần</small></div>
+      <div class="upload-label" id="label-quy">Không bắt buộc</div>
+      <button class="btn-file-export" onclick="downloadQuyTemplate()" style="margin-top:4px" title="Tải mẫu file Quý">⬇ Mẫu</button>
+    </div>
+
   </div>
 </section>
 
@@ -152,6 +162,15 @@
       <div class="formula-row"><label>Target số hộp:</label><input id="spcd-soluong" class="formula-inp" type="number" min="0" style="width:70px"> hộp/TDV</div>
       <div class="formula-row"><label>Target KH phủ:</label><input id="spcd-dpkh" class="formula-inp" type="number" min="0" style="width:70px"> KH/TDV</div>
       <p class="formula-note" style="margin-top:4px">ĐPMH QLBH: ngưỡng = 500.000 × số TDV trực thuộc</p>
+    </div>
+
+    <div class="formula-section">
+      <h4>Cấu hình Quý</h4>
+      <p class="formula-note">Tên quý và nhãn 3 tháng. T3 = tháng hiện tại (tự động).</p>
+      <div class="formula-row"><label>Tên Quý:</label><input id="quy-label" class="formula-inp" type="text" placeholder="Q2/2026" style="width:90px"></div>
+      <div class="formula-row"><label>Tháng 1 (T1):</label><input id="quy-t1" class="formula-inp" type="text" placeholder="T04" style="width:60px"></div>
+      <div class="formula-row"><label>Tháng 2 (T2):</label><input id="quy-t2" class="formula-inp" type="text" placeholder="T05" style="width:60px"></div>
+      <div class="formula-row"><label>Tháng 3 (T3 = hiện tại):</label><input id="quy-t3" class="formula-inp" type="text" placeholder="T06" style="width:60px"></div>
     </div>
 
   </div>

@@ -364,3 +364,24 @@ function enrichOrders(orders, companyKhMap) {
   }
   return orders;
 }
+
+// ── Đọc file Quý (T1/T2 Target + Thực, T3 = tháng hiện tại) ──
+async function parseQuyData(file) {
+  const buf = await readFileAsArrayBuffer(file);
+  const wb  = XLSX.read(buf, { type: 'array' });
+  const ws  = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  const map = {};
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const maTDV = String(row[0] || '').trim();
+    if (!maTDV) continue;
+    map[maTDV] = {
+      t1Target: parseFloat(row[2]) || 0,
+      t2Target: parseFloat(row[3]) || 0,
+      t1Thuc:   parseFloat(row[4]) || 0,
+      t2Thuc:   parseFloat(row[5]) || 0,
+    };
+  }
+  return map;
+}

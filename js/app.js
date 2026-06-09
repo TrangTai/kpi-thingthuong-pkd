@@ -10,10 +10,11 @@ const SK = {
   target:   'kpi_static_target_v2',
   dskh:     'kpi_static_dskh_v2',
   bangGia:  'kpi_static_banggia_v2',
+  quy:      'kpi_static_quy_v1',
 };
 
 const uploadedFiles = {
-  donHang: null, dhLon: null, target: null, dskh: null, bangGia: null,
+  donHang: null, dhLon: null, target: null, dskh: null, bangGia: null, quy: null,
 };
 
 const staticData = {
@@ -22,6 +23,7 @@ const staticData = {
   targets:       null,
   companyKhMap:  null,
   bangGiaMap:    null,
+  quyMap:        null,
 };
 
 // Raw preview data (first 200 rows) for each file
@@ -40,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupFileInput('input-target',   'badge-target',   'label-target',   f => { uploadedFiles.target  = f; onStaticUpload('target', f, parseTarget, SK.target, 'targets'); }, false);
   setupFileInput('input-dskh',     'badge-dskh',     'label-dskh',     f => { uploadedFiles.dskh    = f; onStaticUpload('dskh', f, parseDSKHCongTy, SK.dskh, 'companyKhMap'); }, false);
   setupFileInput('input-bang-gia', 'badge-bang-gia', 'label-bang-gia', f => { uploadedFiles.bangGia = f; onStaticUpload('bangGia', f, parseBangGia, SK.bangGia, 'bangGiaMap'); }, false);
+  setupFileInput('input-quy', 'badge-quy', 'label-quy', f => { uploadedFiles.quy = f; onStaticUpload('quy', f, parseQuyData, SK.quy, 'quyMap'); }, false);
 
   document.getElementById('btn-calculate').addEventListener('click', onCalculate);
   document.getElementById('btn-export').addEventListener('click', onExport);
@@ -162,6 +165,17 @@ function exportFileData(key) {
   XLSX.writeFile(wb, fname + '_export.xlsx');
 }
 
+function downloadQuyTemplate() {
+  const qc = CONFIG.QUY_CONFIG;
+  const wb = XLSX.utils.book_new();
+  const hdrs = ['Mã TDV','Tên TDV', qc.thang1+' Target', qc.thang2+' Target', qc.thang1+' Thực (DS T+CT)', qc.thang2+' Thực (DS T+CT)'];
+  const ws = XLSX.utils.aoa_to_sheet([hdrs]);
+  ws['!cols'] = [10,22,16,16,22,22].map(w=>({wch:w}));
+  ws['!freeze'] = { xSplit:0, ySplit:1, topLeftCell:'A2', activePane:'bottomLeft' };
+  XLSX.utils.book_append_sheet(wb, ws, 'Quý');
+  XLSX.writeFile(wb, `MAU_QUY_${qc.quyLabel.replace('/','_')}.xlsx`);
+}
+
 // ─── Load static from localStorage ──────────────────────────
 function loadStaticFromStorage() {
   const defs = [
@@ -170,6 +184,7 @@ function loadStaticFromStorage() {
     { key: SK.target,  dataKey: 'targets',        previewKey: 'target',  badgeKey: 'target',   label: 'Target' },
     { key: SK.dskh,    dataKey: 'companyKhMap',   previewKey: 'dskh',    badgeKey: 'dskh',     label: 'DSKH CT' },
     { key: SK.bangGia, dataKey: 'bangGiaMap',     previewKey: 'bangGia', badgeKey: 'bang-gia', label: 'Bảng giá' },
+    { key: SK.quy,     dataKey: 'quyMap',         previewKey: 'quy',     badgeKey: 'quy',       label: 'Quý' },
   ];
   for (const def of defs) {
     try {
@@ -252,7 +267,7 @@ async function onCalculate() {
 }
 
 function renderOutput(results, statsText, timestamp) {
-  document.getElementById('output').innerHTML = renderTable(results);
+  document.getElementById('output').innerHTML = renderTable(results, staticData.quyMap || null);
 
   const statsEl = document.getElementById('stats');
   if (statsEl) { statsEl.innerHTML = statsText; statsEl.style.display = 'inline'; }
@@ -289,7 +304,7 @@ function loadResultsFromStorage() {
 
 function onExport() {
   if (!lastCalcData) { alert('Chưa có kết quả để xuất.'); return; }
-  exportToExcel(lastCalcData.results, lastCalcData.dpkhDetail, lastCalcData.dpmhDetail);
+  exportToExcel(lastCalcData.results, lastCalcData.dpkhDetail, lastCalcData.dpmhDetail, staticData.quyMap || null);
 }
 
 function onClear() {
@@ -447,6 +462,16 @@ function initFormulaPanel() {
   if (spSL) spSL.value = CONFIG.SP_CHI_DINH.soLuongTarget || 0;
   const spDPKH = document.getElementById('spcd-dpkh');
   if (spDPKH) spDPKH.value = CONFIG.SP_CHI_DINH.dpkhSpCdTarget || 0;
+
+  // Cấu hình Quý
+  const quyLabelEl = document.getElementById('quy-label');
+  if (quyLabelEl) quyLabelEl.value = CONFIG.QUY_CONFIG.quyLabel || '';
+  const quyT1El = document.getElementById('quy-t1');
+  if (quyT1El) quyT1El.value = CONFIG.QUY_CONFIG.thang1 || '';
+  const quyT2El = document.getElementById('quy-t2');
+  if (quyT2El) quyT2El.value = CONFIG.QUY_CONFIG.thang2 || '';
+  const quyT3El = document.getElementById('quy-t3');
+  if (quyT3El) quyT3El.value = CONFIG.QUY_CONFIG.thang3 || '';
 }
 
 function applyFormulaConfig() {
@@ -484,6 +509,16 @@ function applyFormulaConfig() {
   const spDPKH = document.getElementById('spcd-dpkh');
   if (spDPKH) CONFIG.SP_CHI_DINH.dpkhSpCdTarget = parseInt(spDPKH.value) || 0;
 
+  // Cấu hình Quý
+  const quyLabelEl = document.getElementById('quy-label');
+  if (quyLabelEl) CONFIG.QUY_CONFIG.quyLabel = quyLabelEl.value.trim() || CONFIG.QUY_CONFIG.quyLabel;
+  const quyT1El = document.getElementById('quy-t1');
+  if (quyT1El) CONFIG.QUY_CONFIG.thang1 = quyT1El.value.trim() || CONFIG.QUY_CONFIG.thang1;
+  const quyT2El = document.getElementById('quy-t2');
+  if (quyT2El) CONFIG.QUY_CONFIG.thang2 = quyT2El.value.trim() || CONFIG.QUY_CONFIG.thang2;
+  const quyT3El = document.getElementById('quy-t3');
+  if (quyT3El) CONFIG.QUY_CONFIG.thang3 = quyT3El.value.trim() || CONFIG.QUY_CONFIG.thang3;
+
   try {
     localStorage.setItem(SK.config, JSON.stringify({
       PTML_WEIGHTS: CONFIG.PTML_WEIGHTS,
@@ -491,6 +526,7 @@ function applyFormulaConfig() {
       DS_N3_RATIO:  CONFIG.DS_N3_RATIO,
       MIN_DS_PHU:   CONFIG.MIN_DS_PHU,
       SP_CHI_DINH:  { maSP: CONFIG.SP_CHI_DINH.maSP, soLuongTarget: CONFIG.SP_CHI_DINH.soLuongTarget, dpkhSpCdTarget: CONFIG.SP_CHI_DINH.dpkhSpCdTarget },
+      QUY_CONFIG:   CONFIG.QUY_CONFIG,
     }));
   } catch(e) {}
 
@@ -523,6 +559,12 @@ function loadConfigFromStorage() {
       if (s.SP_CHI_DINH.maSP            !== undefined) CONFIG.SP_CHI_DINH.maSP            = s.SP_CHI_DINH.maSP;
       if (s.SP_CHI_DINH.soLuongTarget   !== undefined) CONFIG.SP_CHI_DINH.soLuongTarget   = s.SP_CHI_DINH.soLuongTarget;
       if (s.SP_CHI_DINH.dpkhSpCdTarget  !== undefined) CONFIG.SP_CHI_DINH.dpkhSpCdTarget  = s.SP_CHI_DINH.dpkhSpCdTarget;
+    }
+    if (s.QUY_CONFIG) {
+      if (s.QUY_CONFIG.quyLabel !== undefined) CONFIG.QUY_CONFIG.quyLabel = s.QUY_CONFIG.quyLabel;
+      if (s.QUY_CONFIG.thang1  !== undefined) CONFIG.QUY_CONFIG.thang1   = s.QUY_CONFIG.thang1;
+      if (s.QUY_CONFIG.thang2  !== undefined) CONFIG.QUY_CONFIG.thang2   = s.QUY_CONFIG.thang2;
+      if (s.QUY_CONFIG.thang3  !== undefined) CONFIG.QUY_CONFIG.thang3   = s.QUY_CONFIG.thang3;
     }
   } catch(e) {}
 }
