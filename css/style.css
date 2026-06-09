@@ -446,6 +446,7 @@ th.h-actual{ background: var(--green-700); }
 th.h-ratio { background: var(--violet); }
 th.h-kpi   { background: #8B2252; }
 th.h-spcd  { background: #7D4A00; }
+th.h-con-thang  { background: #5D4037; }
 th.h-quy-target { background: #1B4F72; }
 th.h-quy-actual { background: #1D6A5A; }
 th.h-quy-pct    { background: #5B2C6F; }

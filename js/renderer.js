@@ -65,7 +65,8 @@ function renderTable(results, quyMap) {
     { text: 'HOÀN THÀNH',         span: 7, cls: 'h-actual' },
     { text: 'TỶ LỆ HOÀN THÀNH',  span: 7, cls: 'h-ratio'  },
     { text: 'TỔNG HỢP KPI',       span: 4, cls: 'h-kpi'   },
-    { text: cdLabel,               span: 3, cls: 'h-spcd'  },
+    { text: cdLabel,               span: 3, cls: 'h-spcd'      },
+    { text: 'DS CÒN LẠI THÁNG',  span: 4, cls: 'h-con-thang' },
     ...(quyMap ? [
       { text: `TARGET ${qc.quyLabel}`,     span: 4, cls: 'h-quy-target' },
       { text: `HOÀN THÀNH ${qc.quyLabel}`, span: 4, cls: 'h-quy-actual' },
@@ -107,7 +108,12 @@ function renderTable(results, quyMap) {
     // SP CHỈ ĐỊNH (3)
     { text: 'SL SP CĐ',        cls: 'h-spcd',   nf: 'slspcd',  ph: '>=5',   key: r => r.soLuongSpCd || 0, fmt: 'num', compact: true, tip: `Tổng số hộp ${cdMaSPStr || 'SP chỉ định'} đã bán` },
     { text: 'KH phủ SP CĐ',    cls: 'h-spcd',   nf: 'khspcd',  ph: '>=5',   key: r => r.dpkhSpCd || 0, fmt: 'num', compact: true, tip: `Số KH mua ít nhất 1 trong các mã ${cdMaSPStr || 'SP chỉ định'}` },
-    { text: 'Đạt SP CĐ',       cls: 'h-spcd',   nf: 'datspcd', ph: '>=1',   key: r => r.datSpCd === true ? 1 : 0, fmt: '_spcd', compact: true, tip: `Đạt khi ≥${CONFIG.SP_CHI_DINH.soLuongTarget} hộp VÀ ≥${CONFIG.SP_CHI_DINH.dpkhSpCdTarget} KH phủ` },
+    { text: 'Đạt SP CĐ',       cls: 'h-spcd',      nf: 'datspcd', ph: '>=1',   key: r => r.datSpCd === true ? 1 : 0, fmt: '_spcd', compact: true, tip: `Đạt khi ≥${CONFIG.SP_CHI_DINH.soLuongTarget} hộp VÀ ≥${CONFIG.SP_CHI_DINH.dpkhSpCdTarget} KH phủ` },
+    // DS CÒN LẠI THÁNG (4)
+    { text: 'Mức 100%', cls: 'h-con-thang', nf: 'con100', ph: '>=M', key: r => Math.max(0, r.dsTongTarget * 1.00 - r.dsTongCT), fmt: 'vndC', compact: true, tip: 'Còn thiếu để đạt 100% DS tháng (T+CT)' },
+    { text: 'Mức 115%', cls: 'h-con-thang', nf: 'con115', ph: '>=M', key: r => Math.max(0, r.dsTongTarget * 1.15 - r.dsTongCT), fmt: 'vndC', compact: true, tip: 'Còn thiếu để đạt 115% DS tháng (T+CT)' },
+    { text: 'Mức 125%', cls: 'h-con-thang', nf: 'con125', ph: '>=M', key: r => Math.max(0, r.dsTongTarget * 1.25 - r.dsTongCT), fmt: 'vndC', compact: true, tip: 'Còn thiếu để đạt 125% DS tháng (T+CT)' },
+    { text: 'Mức 135%', cls: 'h-con-thang', nf: 'con135', ph: '>=M', key: r => Math.max(0, r.dsTongTarget * 1.35 - r.dsTongCT), fmt: 'vndC', compact: true, tip: 'Còn thiếu để đạt 135% DS tháng (T+CT)' },
     ...(quyMap ? [
       // TARGET Quý (4)
       { text: qc.thang1+' Target', cls:'h-quy-target', nf:'qt1t',  ph:'>=M', key:r=>{const d=_qd(r);return d.t1Target;},                          fmt:'vndC', compact:true, tip:'Target '+qc.thang1+' (import)' },
@@ -342,6 +348,7 @@ function exportToExcel(results, dpkhDetail, dpmhDetail, quyMap) {
     '% DS N2','% DS N3','% DS Tổng','% DS Tổng+CT','% ĐPKH','% ĐPMH','% DS N15',
     'PTML','Hs ảnh hưởng N1','HSHT','Hs KH CT',
     ...(cdMaSPStr ? [`SL ${cdMaSPStr}`, `KH phủ ${cdMaSPStr}`, `Đạt ${cdMaSPStr}`] : []),
+    'Còn 100% tháng', 'Còn 115% tháng', 'Còn 125% tháng', 'Còn 135% tháng',
   ];
   const rows1 = [hdrs, ...results.map(r => [
     r.maTDV, r.tenTDV, r.khuVuc, r.mien, r.qlbh, r.doiTuong,
@@ -351,6 +358,10 @@ function exportToExcel(results, dpkhDetail, dpmhDetail, quyMap) {
     r.pctDatN2, r.tyLeN3, r.tyleTong, r.tyleTongCT, r.tyleDPKH, r.tyleDPMH, r.tyLeDay15,
     r.ptml, r.hsAnhHuongN1, r.hsht, r.hsKhCT,
     ...(cdMaSPStr ? [r.soLuongSpCd || 0, r.dpkhSpCd || 0, r.datSpCd ? 'Đạt' : 'Chưa đạt'] : []),
+    Math.max(0, r.dsTongTarget * 1.00 - r.dsTongCT),
+    Math.max(0, r.dsTongTarget * 1.15 - r.dsTongCT),
+    Math.max(0, r.dsTongTarget * 1.25 - r.dsTongCT),
+    Math.max(0, r.dsTongTarget * 1.35 - r.dsTongCT),
   ])];
 
   const ws1 = XLSX.utils.aoa_to_sheet(rows1);
