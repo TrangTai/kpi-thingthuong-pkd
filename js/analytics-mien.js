@@ -99,7 +99,10 @@ function renderMienReport(results) {
   el.innerHTML = `
     <div class="mf-header">
       <div class="mf-header-title">📊 BÁO CÁO DOANH SỐ MIỀN</div>
-      <div class="mf-filters">${filterHtml}</div>
+      <div class="mf-header-right">
+        <div class="mf-filters">${filterHtml}</div>
+        <button class="mf-screenshot-btn" onclick="captureMienReport()" title="Chụp toàn bộ báo cáo">📷 Chụp ảnh</button>
+      </div>
     </div>
     <div id="mf-body"></div>`;
 
@@ -116,16 +119,17 @@ function selectMien(mien) {
   document.querySelectorAll('.mf-btn').forEach(b =>
     b.classList.toggle('active', b.dataset.mien === mien));
 
-  const grp     = _mienResults.filter(r => r.mien === mien);
-  const tdvOnly = grp.filter(r => !r.isQLBH);
-  const body    = document.getElementById('mf-body');
+  const grp      = _mienResults.filter(r => r.mien === mien);
+  const qlbhOnly = grp.filter(r =>  r.isQLBH);
+  const tdvOnly  = grp.filter(r => !r.isQLBH);
+  const body     = document.getElementById('mf-body');
   if (!body) return;
 
-  // Summary
-  const totalDS     = grp.reduce((s, r) => s + (r.dsTongCT    || 0), 0);
-  const totalTarget = grp.reduce((s, r) => s + (r.dsTongTarget || 0), 0);
+  // Summary — dùng QLBH rows để tránh đếm double (QLBH đã bao gồm DS của TDV)
+  const totalDS     = qlbhOnly.reduce((s, r) => s + (r.dsTongCT    || 0), 0);
+  const totalTarget = qlbhOnly.reduce((s, r) => s + (r.dsTongTarget || 0), 0);
   const pctDS       = totalTarget > 0 ? totalDS / totalTarget : 0;
-  const totalKH     = grp.reduce((s, r) => s + (r.dpkh        || 0), 0);
+  const totalKH     = qlbhOnly.reduce((s, r) => s + (r.dpkh        || 0), 0);
   const tdvN        = tdvOnly.length;
   const tdvDatDS    = tdvOnly.filter(r => (r.tyleTongCT || 0) >= 1.0).length;
   const tdvDatDPKH  = tdvOnly.filter(r => (r.tyleDPKH   || 0) >= 1.0).length;
@@ -285,4 +289,38 @@ function _buildMienBar(id, data, valFn, barH) {
   chart._mienPadR = PAD_R;
 
   _mienCharts[id] = chart;
+}
+
+// ── Chụp ảnh toàn bộ báo cáo Miền ─────────────────────────
+function captureMienReport() {
+  const el = document.getElementById('mien-report-content');
+  if (!el) return;
+  if (typeof html2canvas === 'undefined') {
+    alert('html2canvas chưa tải. Cần kết nối internet.');
+    return;
+  }
+  const btn = el.querySelector('.mf-screenshot-btn');
+  if (btn) btn.disabled = true;
+
+  html2canvas(el, {
+    backgroundColor: '#F4F6FA',
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+    scrollX: 0,
+    scrollY: 0,
+    windowWidth: el.scrollWidth,
+    width: el.scrollWidth,
+    height: el.scrollHeight,
+  }).then(canvas => {
+    const link = document.createElement('a');
+    const mienLabel = (_currentMien || 'mien').replace(/\s+/g, '_');
+    link.download = 'BaoCao_' + mienLabel + '_' + new Date().toLocaleDateString('vi-VN').replace(/\//g, '-') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }).catch(err => {
+    alert('Lỗi chụp ảnh: ' + err.message);
+  }).finally(() => {
+    if (btn) btn.disabled = false;
+  });
 }

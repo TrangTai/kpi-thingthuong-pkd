@@ -1039,12 +1039,33 @@ th[title]:not([title=""]) { cursor: help; }
   letter-spacing: 0.6px;
   white-space: nowrap;
 }
+.mf-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
 .mf-filters {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  margin-left: auto;
 }
+.mf-screenshot-btn {
+  background: rgba(255,255,255,0.18);
+  border: 1.5px solid rgba(255,255,255,0.4);
+  color: #fff;
+  border-radius: 20px;
+  padding: 4px 13px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.mf-screenshot-btn:hover { background: rgba(255,255,255,0.3); }
+.mf-screenshot-btn:disabled { opacity: 0.5; cursor: wait; }
 .mf-btn {
   background: rgba(255,255,255,0.15);
   border: 1.5px solid rgba(255,255,255,0.28);
