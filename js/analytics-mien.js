@@ -56,7 +56,7 @@ const _mienLabelPlugin = {
       const y   = bar.y;
       const maxX = chartArea.right + PAD - 4;
       ctx.font         = '600 10.5px "Be Vietnam Pro", Segoe UI, sans-serif';
-      ctx.fillStyle    = val >= 100 ? '#005C2A' : '#8B1111';
+      ctx.fillStyle    = val >= 100 ? '#003A7A' : '#8B1111';
       ctx.textAlign    = 'left';
       ctx.textBaseline = 'middle';
       ctx.fillText(txt, Math.min(x, maxX), y);
@@ -219,8 +219,8 @@ function _buildMienBar(id, data, valFn, barH) {
   const maxRaw = Math.max(...rawVals, 110);
   const xMax   = Math.min(350, Math.ceil(maxRaw / 20) * 20 + 30);
 
-  const bgColors  = rawVals.map(v => v >= 100 ? '#00A651' : '#D93B3B');
-  const hovColors = rawVals.map(v => v >= 100 ? '#007A3C' : '#B02222');
+  const bgColors  = rawVals.map(v => v >= 100 ? '#0057A8' : '#D93B3B');
+  const hovColors = rawVals.map(v => v >= 100 ? '#004080' : '#B02222');
 
   const PAD_R  = 58;
   const chartH = Math.max(140, labels.length * (barH + 7) + 54);

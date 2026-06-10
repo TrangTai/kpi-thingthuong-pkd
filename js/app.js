@@ -97,9 +97,10 @@ async function initQLBHApp(userDoc) {
   document.getElementById('upload-section').style.display  = 'none';
   document.getElementById('action-bar').style.display      = 'none';
   document.getElementById('formula-panel').style.display   = 'none';
-  document.querySelector('.tab-nav').style.display         = 'none';
   document.getElementById('cloud-status-bar').style.display = '';
   document.getElementById('qlbh-upload-section').style.display = '';
+  // Tab nav stays visible so QLBH can access Báo cáo and Theo Miền tabs
+  switchTab('tinh-thuong');
 
   setupFileInput('input-don-hang-qlbh', 'badge-don-hang-qlbh', 'label-don-hang-qlbh', f => { uploadedFiles.donHangQLBH = f; });
   document.getElementById('btn-qlbh-calculate')?.addEventListener('click', () => onQLBHCalculate(userDoc));
@@ -126,6 +127,7 @@ async function initQLBHApp(userDoc) {
     renderOutput(results, `Nhóm: <b>${userDoc.tenTDV}</b> · <b>${results.length}</b> thành viên`, null);
     renderPresentation(results);
     document.getElementById('presentation-wrap').style.display = '';
+    switchTab('tinh-thuong');
   } catch(err) {
     if (statusEl) statusEl.textContent = 'Lỗi tải dữ liệu: ' + err.message;
     console.error(err);
@@ -154,6 +156,7 @@ async function onQLBHCalculate(userDoc) {
     staticData.quyMap = await fbLoadQuyMap();
     renderOutput(filtered, `Nhóm: <b>${userDoc.tenTDV}</b> · Tính thử từ file ĐƠN HÀNG`, new Date());
     renderPresentation(filtered);
+    switchTab('tinh-thuong');
   } catch(err) {
     alert('Lỗi: ' + err.message); console.error(err);
   } finally {
