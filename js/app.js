@@ -363,6 +363,9 @@ async function onCalculate() {
     if (document.getElementById('tab-btn-bao-cao').classList.contains('tab-active')) {
       renderAnalytics(results);
     }
+    if (document.getElementById('tab-btn-mien-report')?.classList.contains('tab-active')) {
+      renderMienReport(results);
+    }
 
   } catch (err) {
     showError('Lỗi: ' + err.message);
@@ -405,6 +408,9 @@ function loadResultsFromStorage() {
     lastCalcData = { results: p.results, dpkhDetail: p.dpkhDetail || [], dpmhDetail: p.dpmhDetail || [] };
     renderOutput(p.results, p.statsText, new Date(p.ts));
     document.getElementById('btn-export').style.display = 'inline-block';
+    if (typeof renderMienReport === 'function' && document.getElementById('tab-btn-mien-report')?.classList.contains('tab-active')) {
+      renderMienReport(p.results);
+    }
   } catch(e) {}
 }
 
@@ -646,14 +652,18 @@ function applyFormulaConfig() {
 
 // ─── Tab switching ───────────────────────────────────────────
 function switchTab(tab) {
-  ['tinh-thuong', 'bao-cao'].forEach(t => {
-    document.getElementById('tab-btn-' + t).classList.toggle('tab-active', t === tab);
+  ['tinh-thuong', 'bao-cao', 'mien-report'].forEach(t => {
+    const btn = document.getElementById('tab-btn-' + t);
+    if (btn) btn.classList.toggle('tab-active', t === tab);
   });
   const outputEl    = document.querySelector('.output-section');
   const analyticsEl = document.getElementById('analytics-section');
-  if (outputEl)    outputEl.style.display    = tab === 'tinh-thuong' ? '' : 'none';
-  if (analyticsEl) analyticsEl.style.display = tab === 'bao-cao'     ? '' : 'none';
-  if (tab === 'bao-cao' && lastCalcData) renderAnalytics(lastCalcData.results);
+  const mienEl      = document.getElementById('mien-report-section');
+  if (outputEl)    outputEl.style.display    = tab === 'tinh-thuong'  ? '' : 'none';
+  if (analyticsEl) analyticsEl.style.display = tab === 'bao-cao'      ? '' : 'none';
+  if (mienEl)      mienEl.style.display      = tab === 'mien-report'  ? '' : 'none';
+  if (tab === 'bao-cao'     && lastCalcData) renderAnalytics(lastCalcData.results);
+  if (tab === 'mien-report' && lastCalcData) renderMienReport(lastCalcData.results);
 }
 
 function loadConfigFromStorage() {

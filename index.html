@@ -163,6 +163,7 @@
 <div class="tab-nav">
   <button class="tab-btn tab-active" id="tab-btn-tinh-thuong" onclick="switchTab('tinh-thuong')">📊 Tính Thưởng</button>
   <button class="tab-btn" id="tab-btn-bao-cao" onclick="switchTab('bao-cao')">📈 Báo cáo</button>
+  <button class="tab-btn" id="tab-btn-mien-report" onclick="switchTab('mien-report')">🗺 Theo Miền</button>
 </div>
 
 <!-- Formula / Config Panel -->
@@ -274,6 +275,13 @@
   </div>
 </section>
 
+<!-- Mien Report Section -->
+<section class="mien-report-section" id="mien-report-section" style="display:none">
+  <div id="mien-report-content">
+    <div style="padding:48px;text-align:center;color:#aaa;font-size:14px;font-family:'Be Vietnam Pro',sans-serif">Nhấn <b>Tính Thưởng</b> để xem báo cáo.</div>
+  </div>
+</section>
+
 <!-- Preview Modal -->
 <div id="preview-modal" class="modal-overlay" onclick="if(event.target===this)closePreview()">
   <div class="modal-box">
@@ -299,6 +307,7 @@
 <script src="js/calculator.js?v=2"></script>
 <script src="js/renderer.js"></script>
 <script src="js/analytics.js"></script>
+<script src="js/analytics-mien.js"></script>
 <script src="js/app.js"></script>
 
 </div><!-- end app-main -->
