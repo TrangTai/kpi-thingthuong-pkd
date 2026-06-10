@@ -428,7 +428,7 @@ function exportToExcel(results, dpkhDetail, dpmhDetail, quyMap) {
     const wsQ = XLSX.utils.aoa_to_sheet(rowsQ);
     wsQ['!cols'] = [8,20,14,14,14,14, 14,14,14,14, 10,14,14,14,14].map(w=>({wch:w}));
     _applyPctFormat(wsQ, [10], rowsQ.length);
-    XLSX.utils.book_append_sheet(wb, wsQ, 'Quý '+qc.quyLabel);
+    XLSX.utils.book_append_sheet(wb, wsQ, ('Quý '+qc.quyLabel).replace(/[/\\?*[\]:]/g, '-'));
   }
 
   // ── Sheet 4: Tổng DS ─────────────────────────────────────
