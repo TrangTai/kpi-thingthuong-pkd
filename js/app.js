@@ -410,7 +410,12 @@ function loadResultsFromStorage() {
 
 function onExport() {
   if (!lastCalcData) { alert('Chưa có kết quả để xuất.'); return; }
-  exportToExcel(lastCalcData.results, lastCalcData.dpkhDetail, lastCalcData.dpmhDetail, staticData.quyMap || null);
+  try {
+    exportToExcel(lastCalcData.results, lastCalcData.dpkhDetail, lastCalcData.dpmhDetail, staticData.quyMap || null);
+  } catch(err) {
+    alert('Lỗi xuất Excel: ' + err.message);
+    console.error(err);
+  }
 }
 
 function onClear() {

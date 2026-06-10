@@ -57,9 +57,9 @@ function renderTable(results, quyMap) {
   const groups = [
     { text: 'Mã TDV',              rowspan: 2, sticky: 1 },
     { text: 'Tên TDV',             rowspan: 2, sticky: 2 },
-    { text: 'Khu vực',             rowspan: 2, sticky: 3 },
-    { text: 'Miền',                rowspan: 2 },
-    { text: 'Tên QLBH',            rowspan: 2 },
+    { text: 'Khu vực',             rowspan: 2, sticky: 3, cls: 'col-kv'   },
+    { text: 'Miền',                rowspan: 2,             cls: 'col-mien' },
+    { text: 'Tên QLBH',            rowspan: 2,             cls: 'col-qlbh' },
     { text: 'Đối tượng',           rowspan: 2 },
     { text: 'KẾ HOẠCH',           span: 5, cls: 'h-plan'   },
     { text: 'HOÀN THÀNH',         span: 7, cls: 'h-actual' },
@@ -144,6 +144,24 @@ function renderTable(results, quyMap) {
   <button class="btn-zoom btn-zoom-fit" onclick="kpiZoom(0)" title="Tự động thu nhỏ cho vừa màn hình">⊡ Vừa màn hình</button>
   <button class="btn-zoom" onclick="kpiZoom(null)" title="Đặt lại 100%">↺ 100%</button>
   <span style="color:#aaa;margin-left:8px">Số tiền hiển thị rút gọn · rê chuột để xem đầy đủ</span>
+  <span style="margin-left:auto;display:flex;gap:4px">
+    <button class="btn-zoom" id="btn-col-toggle" onclick="toggleColPanel()" title="Ẩn/hiện nhóm cột">👁 Cột</button>
+    <button class="btn-zoom btn-screenshot" id="btn-screenshot" onclick="captureTable()" title="Chụp toàn bộ bảng thành ảnh PNG">📷 Chụp ảnh</button>
+  </span>
+</div>
+<div id="col-toggle-panel" class="col-toggle-panel" style="display:none">
+  <span class="ctg-label">Hiển thị cột:</span>
+  <label class="ctg-item"><input type="checkbox" data-col-group="plan" checked onchange="applyColToggle()"> KẾ HOẠCH</label>
+  <label class="ctg-item"><input type="checkbox" data-col-group="actual" checked onchange="applyColToggle()"> HOÀN THÀNH</label>
+  <label class="ctg-item"><input type="checkbox" data-col-group="ratio" checked onchange="applyColToggle()"> TỶ LỆ %</label>
+  <label class="ctg-item"><input type="checkbox" data-col-group="kpi" checked onchange="applyColToggle()"> TỔNG HỢP KPI</label>
+  <label class="ctg-item"><input type="checkbox" data-col-group="spcd" checked onchange="applyColToggle()"> SP CHỈ ĐỊNH</label>
+  <label class="ctg-item"><input type="checkbox" data-col-group="con-thang" checked onchange="applyColToggle()"> DS CÒN LẠI</label>
+  ${quyMap ? `<label class="ctg-item"><input type="checkbox" data-col-group="quy" checked onchange="applyColToggle()"> ${qc.quyLabel}</label>` : ''}
+  <span class="ctg-sep"></span>
+  <label class="ctg-item"><input type="checkbox" data-col-group="kv" checked onchange="applyColToggle()"> Khu vực</label>
+  <label class="ctg-item"><input type="checkbox" data-col-group="mien" checked onchange="applyColToggle()"> Miền</label>
+  <label class="ctg-item"><input type="checkbox" data-col-group="qlbh" checked onchange="applyColToggle()"> Tên QLBH</label>
 </div>
 <div class="table-wrap"><table class="kpi-table"><thead>`;
 
@@ -176,9 +194,9 @@ function renderTable(results, quyMap) {
   html += '<tr class="filter-row" id="filter-row">';
   html += `<td class="sc-1"><input size="1" class="filter-inp" placeholder="Mã..." oninput="filterTable()" data-field="maTDV"></td>`;
   html += `<td class="sc-2"><input size="1" class="filter-inp" placeholder="Tên..." oninput="filterTable()" data-field="tenTDV"></td>`;
-  html += `<td class="sc-3"><input size="1" class="filter-inp" placeholder="KV..." oninput="filterTable()" data-field="khuVuc"></td>`;
-  html += `<td><select class="filter-sel" onchange="filterTable()" data-field="mien"><option value="">—</option>${mienVals.map(v => `<option>${v}</option>`).join('')}</select></td>`;
-  html += `<td><select class="filter-sel" onchange="filterTable()" data-field="qlbh"><option value="">—</option>${qlbhVals.map(v => `<option>${v}</option>`).join('')}</select></td>`;
+  html += `<td class="sc-3 col-kv"><input size="1" class="filter-inp" placeholder="KV..." oninput="filterTable()" data-field="khuVuc"></td>`;
+  html += `<td class="col-mien"><select class="filter-sel" onchange="filterTable()" data-field="mien"><option value="">—</option>${mienVals.map(v => `<option>${v}</option>`).join('')}</select></td>`;
+  html += `<td class="col-qlbh"><select class="filter-sel" onchange="filterTable()" data-field="qlbh"><option value="">—</option>${qlbhVals.map(v => `<option>${v}</option>`).join('')}</select></td>`;
   html += `<td style="white-space:nowrap">
     <select class="filter-sel" style="width:auto;min-width:0" onchange="filterTable()" data-field="doiTuong">
       <option value="">—</option>${doiTuongVals.map(v => `<option>${v}</option>`).join('')}
@@ -187,7 +205,7 @@ function renderTable(results, quyMap) {
     <span id="filter-count" style="font-size:10px;color:#888"></span>
   </td>`;
   for (const c of cols) {
-    html += `<td><input size="1" class="filter-num" placeholder="${c.ph}" oninput="filterTable()" data-numfield="${c.nf}" title=">=, <=, >, <, = | K/M/B"></td>`;
+    html += `<td class="${c.cls || ''}"><input size="1" class="filter-num" placeholder="${c.ph}" oninput="filterTable()" data-numfield="${c.nf}" title=">=, <=, >, <, = | K/M/B"></td>`;
   }
   html += '</tr>';
   html += '</thead><tbody id="kpi-tbody">';
@@ -210,9 +228,9 @@ function renderTable(results, quyMap) {
 
     html += `<td class="col-id sc-1">${r.maTDV}</td>`;
     html += `<td class="col-name sc-2">${r.tenTDV}</td>`;
-    html += `<td class="sc-3">${r.khuVuc}</td>`;
-    html += `<td>${r.mien}</td>`;
-    html += `<td>${r.qlbh}</td>`;
+    html += `<td class="sc-3 col-kv">${r.khuVuc}</td>`;
+    html += `<td class="col-mien">${r.mien}</td>`;
+    html += `<td class="col-qlbh">${r.qlbh}</td>`;
     html += `<td class="col-type">${r.doiTuong}</td>`;
 
     for (const c of cols) {
@@ -426,7 +444,13 @@ function exportToExcel(results, dpkhDetail, dpmhDetail, quyMap) {
   _setColWidths(ws4, 12);
   XLSX.utils.book_append_sheet(wb, ws4, 'Tổng DS');
 
-  XLSX.writeFile(wb, 'KPI_Tinh_Thuong_' + date + '.xlsx');
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([wbout], { type: 'application/octet-stream' });
+  const dlUrl = URL.createObjectURL(blob);
+  const dlA = document.createElement('a');
+  dlA.href = dlUrl; dlA.download = 'KPI_Tinh_Thuong_' + date + '.xlsx';
+  document.body.appendChild(dlA); dlA.click(); document.body.removeChild(dlA);
+  setTimeout(() => URL.revokeObjectURL(dlUrl), 1000);
 }
 
 function _setColWidths(ws, count) {
@@ -651,4 +675,58 @@ function kpiZoom(delta) {
   output.style.zoom = _kpiZoomLevel / 100;
   const el = document.getElementById('kpi-zoom-pct');
   if (el) el.textContent = _kpiZoomLevel + '%';
+}
+
+// ============================================================
+// COLUMN TOGGLE + SCREENSHOT
+// ============================================================
+
+function toggleColPanel() {
+  const p = document.getElementById('col-toggle-panel');
+  if (p) p.style.display = p.style.display === 'none' ? '' : 'none';
+}
+
+function applyColToggle() {
+  const table = document.querySelector('.kpi-table');
+  if (!table) return;
+  ['plan','actual','ratio','kpi','spcd','con-thang','quy','kv','mien','qlbh']
+    .forEach(g => table.classList.remove('hide-' + g));
+  document.querySelectorAll('[data-col-group]').forEach(cb => {
+    if (!cb.checked) table.classList.add('hide-' + cb.dataset.colGroup);
+  });
+}
+
+async function captureTable() {
+  if (typeof html2canvas === 'undefined') {
+    alert('Thư viện chụp ảnh chưa tải. Vui lòng tải lại trang.');
+    return;
+  }
+  const table = document.querySelector('.kpi-table');
+  if (!table) { alert('Không tìm thấy bảng dữ liệu.'); return; }
+
+  const btn = document.getElementById('btn-screenshot');
+  const orig = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang chụp...'; }
+
+  table.classList.add('capturing');
+  try {
+    const canvas = await html2canvas(table, {
+      scale: 1.5,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      allowTaint: true,
+      scrollX: 0, scrollY: 0,
+    });
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'KPI_Bang_Tinh_Thuong_' + new Date().toLocaleDateString('vi-VN').replace(/\//g, '-') + '.png';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  } catch(err) {
+    alert('Lỗi chụp ảnh: ' + err.message);
+    console.error(err);
+  } finally {
+    table.classList.remove('capturing');
+    if (btn) { btn.disabled = false; btn.textContent = orig; }
+  }
 }

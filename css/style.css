@@ -961,3 +961,52 @@ th[title]:not([title=""]) { cursor: help; }
 }
 #qlbh-upload-section h3 { font-size: 13px; color: #0057A8; margin-bottom: 12px; }
 .qlbh-upload-row { display: flex; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+
+/* ============================================================
+   COLUMN TOGGLE PANEL + SCREENSHOT
+   ============================================================ */
+.col-toggle-panel {
+  background: #f0f4f8;
+  border-bottom: 1px solid var(--gray-200);
+  padding: 6px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.ctg-label { font-weight: 700; color: var(--gray-600); font-size: 11px; margin-right: 2px; }
+.ctg-sep { width: 1px; height: 18px; background: var(--gray-300); margin: 0 4px; align-self: stretch; }
+.ctg-item {
+  display: inline-flex; align-items: center; gap: 4px; cursor: pointer;
+  padding: 2px 8px; border-radius: 4px; font-size: 11px;
+  background: #fff; border: 1px solid var(--gray-200); color: var(--gray-600);
+  transition: all .12s; user-select: none;
+}
+.ctg-item:hover { border-color: var(--blue); color: var(--blue); }
+.ctg-item input[type=checkbox] { cursor: pointer; accent-color: var(--blue); width: 12px; height: 12px; flex-shrink: 0; }
+
+.btn-screenshot { background: #5D4037 !important; color: #fff !important; border-color: #4E342E !important; font-weight: 700; }
+.btn-screenshot:hover { background: #4E342E !important; }
+.btn-screenshot:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.kpi-table.hide-plan     .h-plan      { display: none; }
+.kpi-table.hide-actual   .h-actual    { display: none; }
+.kpi-table.hide-ratio    .h-ratio     { display: none; }
+.kpi-table.hide-kpi      .h-kpi       { display: none; }
+.kpi-table.hide-spcd     .h-spcd      { display: none; }
+.kpi-table.hide-con-thang .h-con-thang { display: none; }
+.kpi-table.hide-quy .h-quy-target,
+.kpi-table.hide-quy .h-quy-actual,
+.kpi-table.hide-quy .h-quy-pct,
+.kpi-table.hide-quy .h-quy-con { display: none; }
+.kpi-table.hide-kv   .col-kv   { display: none; }
+.kpi-table.hide-mien .col-mien { display: none; }
+.kpi-table.hide-qlbh .col-qlbh { display: none; }
+
+.kpi-table.capturing .sc-1,
+.kpi-table.capturing .sc-2,
+.kpi-table.capturing .sc-3 {
+  position: static !important;
+  left: auto !important;
+}
