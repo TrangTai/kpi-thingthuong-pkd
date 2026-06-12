@@ -114,6 +114,25 @@ async function fbCreateOneAccount(maTDV, tenTDV, qlbhCode) {
   return 'created';
 }
 
+async function fbCreateSpecialAccount(username, password, tenTDV, role) {
+  const email = `${username.trim()}@kpi.local`;
+  const res = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password, returnSecureToken: false }) }
+  );
+  const data = await res.json();
+  if (data.error) {
+    if (data.error.message === 'EMAIL_EXISTS') return 'exists';
+    throw new Error(data.error.message);
+  }
+  await db.collection('users').doc(data.localId).set({
+    role, maTDV: username, tenTDV, email,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  return 'created';
+}
+
 async function fbCreateQLBHAccounts(targets) {
   const qlbhList = targets.filter(t => t.doiTuong && t.doiTuong.trim().toUpperCase() === 'QLBH');
   const out = [];
