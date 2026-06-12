@@ -55,12 +55,12 @@ function renderTable(results, quyMap) {
 
   // ── Header row 1 (group headers) ──────────────────────────
   const groups = [
-    { text: 'Mã TDV',              rowspan: 2, sticky: 1 },
+    { text: 'Mã TDV',              rowspan: 2, sticky: 1, cls: 'col-matdv' },
     { text: 'Tên TDV',             rowspan: 2, sticky: 2 },
     { text: 'Khu vực',             rowspan: 2, sticky: 3, cls: 'col-kv'   },
     { text: 'Miền',                rowspan: 2,             cls: 'col-mien' },
     { text: 'Tên QLBH',            rowspan: 2,             cls: 'col-qlbh' },
-    { text: 'Đối tượng',           rowspan: 2 },
+    { text: 'Đối tượng',           rowspan: 2,             cls: 'col-type' },
     { text: 'KẾ HOẠCH',           span: 5, cls: 'h-plan'   },
     { text: 'HOÀN THÀNH',         span: 7, cls: 'h-actual' },
     { text: 'TỶ LỆ HOÀN THÀNH',  span: 7, cls: 'h-ratio'  },
@@ -158,10 +158,15 @@ function renderTable(results, quyMap) {
   <label class="ctg-item"><input type="checkbox" data-col-group="spcd" checked onchange="applyColToggle()"> SP CHỈ ĐỊNH</label>
   <label class="ctg-item"><input type="checkbox" data-col-group="con-thang" checked onchange="applyColToggle()"> DS CÒN LẠI</label>
   ${quyMap ? `<label class="ctg-item"><input type="checkbox" data-col-group="quy" checked onchange="applyColToggle()"> ${qc.quyLabel}</label>` : ''}
+  ${quyMap ? `<label class="ctg-item"><input type="checkbox" data-col-group="quy-target" checked onchange="applyColToggle()"> Target ${qc.quyLabel}</label>` : ''}
   <span class="ctg-sep"></span>
   <label class="ctg-item"><input type="checkbox" data-col-group="kv" checked onchange="applyColToggle()"> Khu vực</label>
   <label class="ctg-item"><input type="checkbox" data-col-group="mien" checked onchange="applyColToggle()"> Miền</label>
   <label class="ctg-item"><input type="checkbox" data-col-group="qlbh" checked onchange="applyColToggle()"> Tên QLBH</label>
+  <label class="ctg-item"><input type="checkbox" data-col-group="matdv" checked onchange="applyColToggle()"> Mã TDV</label>
+  <label class="ctg-item"><input type="checkbox" data-col-group="type" checked onchange="applyColToggle()"> Đối tượng</label>
+  <span class="ctg-sep"></span>
+  <label class="ctg-item ctg-row-toggle"><input type="checkbox" data-col-group="qlbh-rows" checked onchange="applyColToggle()"> Hiện dòng QLBH</label>
 </div>
 <div class="table-wrap"><table class="kpi-table"><thead>`;
 
@@ -192,12 +197,12 @@ function renderTable(results, quyMap) {
   const qlbhVals     = [...new Set(_allResults.map(r => r.qlbh).filter(Boolean))].sort();
 
   html += '<tr class="filter-row" id="filter-row">';
-  html += `<td class="sc-1"><input size="1" class="filter-inp" placeholder="Mã..." oninput="filterTable()" data-field="maTDV"></td>`;
+  html += `<td class="sc-1 col-matdv"><input size="1" class="filter-inp" placeholder="Mã..." oninput="filterTable()" data-field="maTDV"></td>`;
   html += `<td class="sc-2"><input size="1" class="filter-inp" placeholder="Tên..." oninput="filterTable()" data-field="tenTDV"></td>`;
   html += `<td class="sc-3 col-kv"><input size="1" class="filter-inp" placeholder="KV..." oninput="filterTable()" data-field="khuVuc"></td>`;
   html += `<td class="col-mien"><select class="filter-sel" onchange="filterTable()" data-field="mien"><option value="">—</option>${mienVals.map(v => `<option>${v}</option>`).join('')}</select></td>`;
   html += `<td class="col-qlbh"><select class="filter-sel" onchange="filterTable()" data-field="qlbh"><option value="">—</option>${qlbhVals.map(v => `<option>${v}</option>`).join('')}</select></td>`;
-  html += `<td style="white-space:nowrap">
+  html += `<td class="col-type" style="white-space:nowrap">
     <select class="filter-sel" style="width:auto;min-width:0" onchange="filterTable()" data-field="doiTuong">
       <option value="">—</option>${doiTuongVals.map(v => `<option>${v}</option>`).join('')}
     </select>
@@ -226,7 +231,7 @@ function renderTable(results, quyMap) {
 
     html += `<tr class="${rowCls}" data-matdv="${r.maTDV}" data-tentdv="${r.tenTDV}" data-khuvuc="${r.khuVuc}" data-mien="${mn}" data-qlbh="${qb}" data-doituong="${dt}" ${numAttrs}>`;
 
-    html += `<td class="col-id sc-1">${r.maTDV}</td>`;
+    html += `<td class="col-id col-matdv sc-1">${r.maTDV}</td>`;
     html += `<td class="col-name sc-2">${r.tenTDV}</td>`;
     html += `<td class="sc-3 col-kv">${r.khuVuc}</td>`;
     html += `<td class="col-mien">${r.mien}</td>`;
@@ -689,7 +694,7 @@ function toggleColPanel() {
 function applyColToggle() {
   const table = document.querySelector('.kpi-table');
   if (!table) return;
-  ['plan','actual','ratio','kpi','spcd','con-thang','quy','kv','mien','qlbh']
+  ['plan','actual','ratio','kpi','spcd','con-thang','quy','quy-target','kv','mien','qlbh','matdv','type','qlbh-rows']
     .forEach(g => table.classList.remove('hide-' + g));
   document.querySelectorAll('[data-col-group]').forEach(cb => {
     if (!cb.checked) table.classList.add('hide-' + cb.dataset.colGroup);
