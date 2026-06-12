@@ -115,20 +115,32 @@ async function fbCreateOneAccount(maTDV, tenTDV, qlbhCode) {
 }
 
 async function fbCreateSpecialAccount(username, password, tenTDV, role) {
-  const email = `${username.trim()}@kpi.local`;
+  const email    = `${username.trim()}@kpi.local`;
+  // TPKD dùng role 'admin' trong Firestore để được đọc toàn bộ results;
+  // flag isTpkd phân biệt với admin thật trong app logic.
+  const storeRole  = role === 'tpkd' ? 'admin' : role;
+  const docFields  = { role: storeRole, maTDV: username.trim(), tenTDV, email,
+                       ...(role === 'tpkd' ? { isTpkd: true } : {}) };
+
   const res = await fetch(
     `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, returnSecureToken: false }) }
   );
   const data = await res.json();
+
   if (data.error) {
-    if (data.error.message === 'EMAIL_EXISTS') return 'exists';
+    if (data.error.message === 'EMAIL_EXISTS') {
+      // Tài khoản đã tồn tại — cập nhật Firestore doc (admin có quyền write)
+      const snap = await db.collection('users').where('maTDV', '==', username.trim()).limit(1).get();
+      if (!snap.empty) { await snap.docs[0].ref.update(docFields); return 'updated'; }
+      return 'exists';
+    }
     throw new Error(data.error.message);
   }
+
   await db.collection('users').doc(data.localId).set({
-    role, maTDV: username, tenTDV, email,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    ...docFields, createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
   return 'created';
 }

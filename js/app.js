@@ -64,11 +64,12 @@ function showApp(userDoc) {
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-main').style.display = '';
   document.getElementById('user-bar-name').textContent = userDoc.tenTDV || userDoc.maTDV;
+  const isTpkd = !!(userDoc.isTpkd);
   document.getElementById('user-bar-role').textContent =
-    userDoc.role === 'admin' ? 'Admin' :
-    userDoc.role === 'tpkd' ? 'Trưởng phòng KD' : 'Quản lý BH';
-  if (userDoc.role === 'admin') initAdminApp();
-  else if (userDoc.role === 'tpkd') initTPKDApp(userDoc);
+    isTpkd ? 'Trưởng phòng KD' :
+    userDoc.role === 'admin' ? 'Admin' : 'Quản lý BH';
+  if (userDoc.role === 'admin' && !isTpkd) initAdminApp();
+  else if (isTpkd || userDoc.role === 'tpkd') initTPKDApp(userDoc);
   else initQLBHApp(userDoc);
 }
 
@@ -180,6 +181,10 @@ async function initTPKDApp(userDoc) {
   setupFileInput('input-don-hang-qlbh', 'badge-don-hang-qlbh', 'label-don-hang-qlbh', f => { uploadedFiles.donHangQLBH = f; });
   document.getElementById('btn-qlbh-calculate')?.addEventListener('click', () => onTPKDCalculate());
 
+  // Wire up export button for TPKD
+  const exportBtn = document.getElementById('btn-qlbh-export');
+  if (exportBtn) exportBtn.addEventListener('click', onExport);
+
   const statusEl = document.getElementById('cloud-status');
   try {
     const [meta, results, quyMap] = await Promise.all([fbLoadMeta(), fbLoadResults(null), fbLoadQuyMap()]);
@@ -187,7 +192,7 @@ async function initTPKDApp(userDoc) {
     if (meta) {
       const ts = meta.savedAt?.toDate?.() || new Date();
       const fmtDt = new Intl.DateTimeFormat('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
-      if (statusEl) statusEl.innerHTML = `Dữ liệu từ Cloud · Cập nhật lần cuối: <b>${fmtDt.format(ts)}</b> · <b>${meta.label || ''}</b>`;
+      if (statusEl) statusEl.innerHTML = `Dữ liệu từ Cloud · Cập nhật: <b>${fmtDt.format(ts)}</b> · <b>${meta.label || ''}</b>`;
     }
 
     if (!results.length) {
@@ -199,9 +204,11 @@ async function initTPKDApp(userDoc) {
     lastCalcData = { results, dpkhDetail: [], dpmhDetail: [] };
     staticData.quyMap = quyMap;
 
-    renderOutput(results, `Toàn bộ PKD · <b>${results.length}</b> nhân viên`, null);
+    const qlbhN = results.filter(r => r.isQLBH).length;
+    renderOutput(results, `Toàn bộ PKD · <b>${results.length - qlbhN}</b> TDV · <b>${qlbhN}</b> QLBH`, null);
     renderPresentation(results);
     document.getElementById('presentation-wrap').style.display = '';
+    if (exportBtn) exportBtn.style.display = 'inline-block';
     switchTab('tinh-thuong');
   } catch(err) {
     if (statusEl) statusEl.textContent = 'Lỗi tải dữ liệu: ' + err.message;
@@ -228,8 +235,11 @@ async function onTPKDCalculate() {
     results.sort((a, b) => (b.isQLBH ? 1 : 0) - (a.isQLBH ? 1 : 0));
     lastCalcData = { results, dpkhDetail: [], dpmhDetail: [] };
     staticData.quyMap = await fbLoadQuyMap();
-    renderOutput(results, `Toàn bộ PKD · <b>${results.length}</b> NV · Tính thử từ ĐƠN HÀNG`, new Date());
+    const qlbhN = results.filter(r => r.isQLBH).length;
+    renderOutput(results, `Toàn bộ PKD · <b>${results.length - qlbhN}</b> TDV · Tính thử từ ĐƠN HÀNG`, new Date());
     renderPresentation(results);
+    const exportBtn = document.getElementById('btn-qlbh-export');
+    if (exportBtn) exportBtn.style.display = 'inline-block';
     switchTab('tinh-thuong');
   } catch(err) {
     alert('Lỗi: ' + err.message); console.error(err);
@@ -243,10 +253,12 @@ async function onCreateTPKDAccount() {
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang tạo...'; }
   try {
     const status = await fbCreateSpecialAccount('TPKD', 'meracine123@', 'Trưởng phòng KD', 'tpkd');
-    if (status === 'exists') {
-      alert('Tài khoản TPKD đã tồn tại rồi.');
+    if (status === 'updated') {
+      alert('✓ Đã cập nhật quyền tài khoản TPKD!\n\nUser: TPKD đã sẵn sàng đăng nhập lại.');
+    } else if (status === 'exists') {
+      alert('Tài khoản TPKD đã tồn tại nhưng không tìm thấy để cập nhật.');
     } else {
-      alert('✓ Đã tạo tài khoản TPKD!\n\nTên đăng nhập: TPKD\nMật khẩu: meracine123@\nVai trò: Trưởng phòng KD');
+      alert('✓ Đã tạo tài khoản TPKD!\n\nTên đăng nhập: TPKD\nMật khẩu: meracine123@');
     }
   } catch(err) {
     alert('Lỗi tạo tài khoản: ' + err.message);
