@@ -77,7 +77,7 @@ function initAdminApp() {
   document.getElementById('btn-save-cloud').style.display    = 'inline-block';
   document.getElementById('btn-create-accounts').style.display = 'inline-block';
   document.getElementById('btn-create-tpkd').style.display   = 'inline-block';
-  document.getElementById('btn-change-pass').style.display   = 'inline-block';
+  document.getElementById('btn-change-pass-bar').style.display = 'inline-block';
 
   setupFileInput('input-don-hang', 'badge-don-hang', 'label-don-hang', f => { uploadedFiles.donHang = f; });
   setupFileInput('input-dh-lon',   'badge-dh-lon',   'label-dh-lon',   f => { uploadedFiles.dhLon   = f; onStaticUpload('dhLon',   f, parseDhLon,        SK.dhLon,   'dhLonOrders');   }, false);
@@ -276,7 +276,7 @@ async function onChangeUserPassword() {
   if (!currentPass) return;
   const newPass = prompt('Nhập mật khẩu MỚI:');
   if (!newPass) return;
-  const btn = document.getElementById('btn-change-pass');
+  const btn = document.getElementById('btn-change-pass-bar');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang đổi...'; }
   try {
     await fbChangeUserPassword(maTDV, currentPass, newPass);
