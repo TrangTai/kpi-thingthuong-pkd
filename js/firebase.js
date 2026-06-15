@@ -145,6 +145,26 @@ async function fbCreateSpecialAccount(username, password, tenTDV, role) {
   return 'created';
 }
 
+async function fbChangeUserPassword(maTDV, currentPassword, newPassword) {
+  const email = maTDV.trim().includes('@') ? maTDV.trim() : `${maTDV.trim()}@kpi.local`;
+  // Sign in as the target user to get their idToken (uses REST API, does not affect current admin session)
+  const signInRes = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${firebaseConfig.apiKey}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: currentPassword, returnSecureToken: true }) }
+  );
+  const signInData = await signInRes.json();
+  if (signInData.error) throw new Error('Sai mật khẩu hiện tại: ' + signInData.error.message);
+
+  const updateRes = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${firebaseConfig.apiKey}`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken: signInData.idToken, password: newPassword, returnSecureToken: false }) }
+  );
+  const updateData = await updateRes.json();
+  if (updateData.error) throw new Error(updateData.error.message);
+}
+
 async function fbCreateQLBHAccounts(targets) {
   const qlbhList = targets.filter(t => t.doiTuong && t.doiTuong.trim().toUpperCase() === 'QLBH');
   const out = [];

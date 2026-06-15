@@ -77,6 +77,7 @@ function initAdminApp() {
   document.getElementById('btn-save-cloud').style.display    = 'inline-block';
   document.getElementById('btn-create-accounts').style.display = 'inline-block';
   document.getElementById('btn-create-tpkd').style.display   = 'inline-block';
+  document.getElementById('btn-change-pass').style.display   = 'inline-block';
 
   setupFileInput('input-don-hang', 'badge-don-hang', 'label-don-hang', f => { uploadedFiles.donHang = f; });
   setupFileInput('input-dh-lon',   'badge-dh-lon',   'label-dh-lon',   f => { uploadedFiles.dhLon   = f; onStaticUpload('dhLon',   f, parseDhLon,        SK.dhLon,   'dhLonOrders');   }, false);
@@ -265,6 +266,25 @@ async function onCreateTPKDAccount() {
     console.error(err);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '🔑 Tạo TK TPKD'; }
+  }
+}
+
+async function onChangeUserPassword() {
+  const maTDV = prompt('Nhập Mã TDV / Username cần đổi mật khẩu:');
+  if (!maTDV) return;
+  const currentPass = prompt(`Nhập mật khẩu HIỆN TẠI của "${maTDV}":`);
+  if (!currentPass) return;
+  const newPass = prompt('Nhập mật khẩu MỚI:');
+  if (!newPass) return;
+  const btn = document.getElementById('btn-change-pass');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang đổi...'; }
+  try {
+    await fbChangeUserPassword(maTDV, currentPass, newPass);
+    alert(`✓ Đã đổi mật khẩu cho "${maTDV}" thành công!\n\nMật khẩu mới: ${newPass}`);
+  } catch(err) {
+    alert('Lỗi: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔒 Đổi mật khẩu'; }
   }
 }
 
