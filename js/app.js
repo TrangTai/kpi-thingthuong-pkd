@@ -68,6 +68,7 @@ function showApp(userDoc) {
   document.getElementById('user-bar-role').textContent =
     isTpkd ? 'Trưởng phòng KD' :
     userDoc.role === 'admin' ? 'Admin' : 'Quản lý BH';
+  document.getElementById('btn-change-pass-bar').style.display = 'inline-block';
   if (userDoc.role === 'admin' && !isTpkd) initAdminApp();
   else if (isTpkd || userDoc.role === 'tpkd') initTPKDApp(userDoc);
   else initQLBHApp(userDoc);
@@ -77,7 +78,6 @@ function initAdminApp() {
   document.getElementById('btn-save-cloud').style.display    = 'inline-block';
   document.getElementById('btn-create-accounts').style.display = 'inline-block';
   document.getElementById('btn-create-tpkd').style.display   = 'inline-block';
-  document.getElementById('btn-change-pass-bar').style.display = 'inline-block';
 
   setupFileInput('input-don-hang', 'badge-don-hang', 'label-don-hang', f => { uploadedFiles.donHang = f; });
   setupFileInput('input-dh-lon',   'badge-dh-lon',   'label-dh-lon',   f => { uploadedFiles.dhLon   = f; onStaticUpload('dhLon',   f, parseDhLon,        SK.dhLon,   'dhLonOrders');   }, false);
