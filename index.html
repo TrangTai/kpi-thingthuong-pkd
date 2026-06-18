@@ -303,6 +303,15 @@
   </div>
 </section>
 
+<!-- KPI Card Modal -->
+<div id="kpi-card-modal" onclick="if(event.target===this)closeKpiCard()">
+  <div class="kc-modal-toolbar">
+    <button id="kc-btn-capture" onclick="captureKpiCard()">📷 Chụp ảnh</button>
+    <button id="kc-btn-close" onclick="closeKpiCard()">✕ Đóng</button>
+  </div>
+  <div id="kpi-card-paper"></div>
+</div>
+
 <!-- Preview Modal -->
 <div id="preview-modal" class="modal-overlay" onclick="if(event.target===this)closePreview()">
   <div class="modal-box">
@@ -330,6 +339,7 @@
 <script src="js/analytics.js"></script>
 <script src="js/analytics-mien.js"></script>
 <script src="js/analytics-checkin.js"></script>
+<script src="js/kpi-card.js"></script>
 <script src="js/app.js"></script>
 
 </div><!-- end app-main -->

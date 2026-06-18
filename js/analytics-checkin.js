@@ -163,7 +163,7 @@ function applyCheckInFilter() {
 // ─── Renderer ────────────────────────────────────────────────
 function _fmtDS(v) {
   if (!v) return '';
-  return (v / 1e6).toFixed(2) + 'M';
+  return Math.round(v / 1e6) + 'M';
 }
 
 function _buildCiTableBody(rows, allDays) {
@@ -172,7 +172,7 @@ function _buildCiTableBody(rows, allDays) {
     if (!row.isGroup) stt++;
     const isGrp = !!row.isGroup;
     const trCls = isGrp ? ' class="ci-grp-row"' : '';
-    const totalFmt = row.totalDS ? (row.totalDS / 1e6).toFixed(1) + 'M' : '—';
+    const totalFmt = row.totalDS ? Math.round(row.totalDS / 1e6) + 'M' : '—';
 
     const dayCells = allDays.map(day => {
       const d = row.daily[day] || { ciKH: 0, ds: 0 };

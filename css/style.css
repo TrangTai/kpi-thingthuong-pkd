@@ -1251,3 +1251,157 @@ th[title]:not([title=""]) { cursor: help; }
 .ci-mien { min-width: 70px; color: #444; text-align: left; }
 /* Red highlight: check-in but no DS */
 .ci-no-ds { background: #FDECEC !important; color: #C0392B !important; font-weight: 700; }
+
+/* ============================================================
+   KPI CARD MODAL
+   ============================================================ */
+#kpi-card-modal {
+  position: fixed; inset: 0; z-index: 9000;
+  background: rgba(10,20,50,0.72);
+  display: none; align-items: flex-start; justify-content: center;
+  padding: 20px 12px 20px; overflow-y: auto;
+}
+#kpi-card-paper {
+  background: #fff; width: 100%; max-width: 780px;
+  border-radius: 10px; overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+  font-family: 'Be Vietnam Pro', sans-serif;
+}
+.kc-modal-toolbar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; justify-content: flex-end; gap: 8px;
+  padding: 8px 12px;
+  background: rgba(10,20,50,0.85);
+}
+.kc-modal-toolbar button {
+  border: none; border-radius: 6px; padding: 6px 14px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+}
+#kc-btn-capture { background: #0057A8; color: #fff; }
+#kc-btn-close   { background: #fff; color: #333; }
+
+/* Header */
+.kc-header {
+  display: flex; justify-content: space-between; align-items: center;
+  background: #0057A8; padding: 14px 20px; color: #fff;
+}
+.kc-header-left { display: flex; align-items: center; gap: 10px; }
+.kc-logo {
+  width: 36px; height: 36px; background: #fff; color: #0057A8;
+  border-radius: 50%; font-size: 18px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+}
+.kc-brand { font-size: 11px; letter-spacing: 2px; opacity: .85; text-transform: uppercase; }
+.kc-title { font-size: 16px; font-weight: 800; }
+.kc-header-right { text-align: right; }
+.kc-date-label { font-size: 9px; letter-spacing: 1px; opacity: .7; text-transform: uppercase; }
+.kc-date { font-size: 14px; font-weight: 700; }
+.kc-quy  { font-size: 11px; opacity: .85; }
+
+/* Info bar */
+.kc-infobar {
+  display: flex; background: #F0F5FC;
+  border-bottom: 1px solid #D0DDF0; padding: 0;
+}
+.kc-info-cell {
+  flex: 1; padding: 8px 12px; border-right: 1px solid #D0DDF0;
+}
+.kc-info-cell:last-child { border-right: none; }
+.kc-info-lbl { font-size: 8.5px; color: #6B7A99; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+.kc-info-val { font-size: 12px; font-weight: 700; color: #1A3A6B; margin-top: 2px; }
+
+/* Summary cards */
+.kc-cards { display: flex; border-bottom: 1px solid #E0E8F5; }
+.kc-card {
+  flex: 1; padding: 12px 14px; border-right: 1px solid #E0E8F5;
+  background: #FAFCFF;
+}
+.kc-card:last-child { border-right: none; }
+.kc-card-blue  { background: #EBF3FC; }
+.kc-card-ptml  { background: #F0FDF4; }
+.kc-card-label { font-size: 8.5px; color: #6B7A99; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+.kc-card-big   { font-size: 24px; font-weight: 800; color: #1A3A6B; line-height: 1.1; }
+.kc-card-sub   { font-size: 10px; color: #6B7A99; margin-top: 3px; }
+
+/* Colors */
+.kc-blue  { color: #0057A8 !important; }
+.kc-green { color: #16A34A !important; }
+.kc-red   { color: #DC2626 !important; }
+.kc-ok    { color: #16A34A; font-weight: 700; }
+.kc-fail  { color: #DC2626; font-weight: 700; }
+
+/* Section layout */
+.kc-section-row {
+  display: flex; border-bottom: 1px solid #E8EFF8;
+}
+.kc-section {
+  padding: 10px 14px; border-right: 1px solid #E8EFF8;
+}
+.kc-section:last-child { border-right: none; }
+.kc-section-wide  { flex: 1; }
+.kc-section-half  { flex: 1; }
+.kc-section-third { flex: 1; }
+.kc-section-title {
+  font-size: 10px; font-weight: 800; color: #1A3A6B;
+  text-transform: uppercase; letter-spacing: .5px;
+  margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+}
+.kc-section-note { font-size: 9px; font-weight: 400; color: #8896B3; text-transform: none; letter-spacing: 0; }
+
+/* KPI progress table */
+.kc-kpi-table { width: 100%; border-collapse: collapse; }
+.kc-kpi-table tr { border-bottom: 1px solid #F0F4FB; }
+.kc-kpi-label  { font-size: 11px; font-weight: 600; color: #1A3A6B; padding: 4px 6px 4px 0; white-space: nowrap; width: 70px; }
+.kc-kpi-pct    { font-size: 11px; font-weight: 700; padding: 4px 6px; text-align: right; width: 56px; white-space: nowrap; }
+.kc-kpi-bar    { padding: 4px 6px; min-width: 120px; }
+.kc-kpi-thr    { font-size: 10px; color: #8896B3; padding: 4px 4px; white-space: nowrap; }
+.kc-kpi-status { font-size: 10px; font-weight: 700; padding: 4px 0 4px 4px; white-space: nowrap; }
+
+.kc-bar-wrap  { position: relative; height: 8px; background: #EDF2FC; border-radius: 4px; overflow: visible; }
+.kc-bar-fill  { height: 100%; border-radius: 4px; transition: width .3s; }
+.kc-bar-mark  { position: absolute; top: -2px; width: 2px; height: 12px; background: #1A3A6B; opacity: .5; transform: translateX(-50%); }
+
+/* DS table */
+.kc-ds-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+.kc-ds-table th { background: #EDF2FC; color: #1A3A6B; font-weight: 700; padding: 4px 6px; text-align: right; font-size: 10px; }
+.kc-ds-table th:first-child { text-align: left; }
+.kc-ds-table td { padding: 4px 6px; border-bottom: 1px solid #F0F4FB; text-align: right; }
+.kc-ds-table td:first-child { text-align: left; color: #444; }
+.kc-ds-note { font-size: 9px; color: #A0ADCC; margin-top: 4px; }
+
+/* Quarterly bar chart */
+.kc-chart { display: flex; align-items: flex-end; gap: 10px; height: 90px; padding: 0 8px; }
+.kc-mcol  { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; }
+.kc-mbar-wrap  { flex: 1; width: 100%; display: flex; align-items: flex-end; }
+.kc-mbar-fill  { width: 100%; border-radius: 3px 3px 0 0; transition: height .3s; min-height: 4px; }
+.kc-mlabel-val { font-size: 10px; font-weight: 700; color: #1A3A6B; margin-top: 3px; }
+.kc-mlabel     { font-size: 9px; color: #8896B3; }
+.kc-chart-footer { display: flex; justify-content: space-between; padding: 4px 8px 0; font-size: 10px; }
+.kc-chart-actual { color: #0057A8; font-weight: 600; }
+.kc-chart-target { color: #DC2626; font-weight: 600; }
+
+/* Tổng hợp */
+.kc-th-table { width: 100%; border-collapse: collapse; }
+.kc-th-label { font-size: 10.5px; color: #444; padding: 4px 6px 4px 0; }
+.kc-th-val   { font-size: 12px; font-weight: 700; padding: 4px 0; text-align: right; }
+.kc-dot { font-size: 9px; }
+.kc-dot-green { color: #16A34A; }
+.kc-dot-red   { color: #DC2626; }
+
+/* SP Chỉ định */
+.kc-sp-body { padding: 4px 0; }
+.kc-sp-row  { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #F0F4FB; font-size: 11px; }
+.kc-sp-label { color: #555; }
+.kc-sp-val   { font-weight: 700; color: #1A3A6B; }
+.kc-sp-none  { font-size: 11px; color: #A0ADCC; padding: 8px 0; text-align: center; }
+
+/* DS còn lại */
+.kc-con-body { padding: 4px 0; }
+.kc-con-row  { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid #F0F4FB; font-size: 11px; }
+.kc-con-label { color: #555; font-weight: 500; }
+.kc-con-val   { font-weight: 700; color: #0057A8; font-size: 13px; }
+.kc-con-val.kc-green { color: #16A34A; font-size: 11px; }
+
+/* Clickable TDV name in main table */
+.col-name.kc-clickable { cursor: pointer; color: #0057A8; }
+.col-name.kc-clickable:hover { text-decoration: underline; background: #EBF3FC; }

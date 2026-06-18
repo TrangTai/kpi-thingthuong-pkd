@@ -232,7 +232,7 @@ function renderTable(results, quyMap) {
     html += `<tr class="${rowCls}" data-matdv="${r.maTDV}" data-tentdv="${r.tenTDV}" data-khuvuc="${r.khuVuc}" data-mien="${mn}" data-qlbh="${qb}" data-doituong="${dt}" ${numAttrs}>`;
 
     html += `<td class="col-id col-matdv sc-1">${r.maTDV}</td>`;
-    html += `<td class="col-name sc-2">${r.tenTDV}</td>`;
+    html += `<td class="col-name sc-2 kc-clickable" onclick="showKpiCard('${r.maTDV}')">${r.tenTDV}</td>`;
     html += `<td class="sc-3 col-kv">${r.khuVuc}</td>`;
     html += `<td class="col-mien">${r.mien}</td>`;
     html += `<td class="col-qlbh">${r.qlbh}</td>`;
