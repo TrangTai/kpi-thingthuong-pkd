@@ -70,17 +70,20 @@ function _buildCard(r, quy) {
   const now = new Date();
   const dateStr = now.toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric' });
 
-  // Quarterly chart data
-  const t1 = quy ? quy.t1Thuc * 1e6 : 0;
-  const t2 = quy ? quy.t2Thuc * 1e6 : 0;
+  // Quarterly chart data — quy values are already in VNĐ
+  const t1 = quy ? (quy.t1Thuc || 0) : 0;
+  const t2 = quy ? (quy.t2Thuc || 0) : 0;
   const t3 = r.dsTongCT;
   const tgt = r.dsTongTarget;
-  const chartMax = Math.max(t1, t2, t3, tgt) * 1.1 || 1;
+  const tQuy = t1 + t2 + t3;                              // Tổng DS Quý thực
+  const tQuyTarget = (quy?.t1Target||0) + (quy?.t2Target||0) + tgt;
+  const chartMax = Math.max(t1, t2, t3, tQuy) * 1.05 || 1;
 
-  // DS còn lại
-  const con100 = Math.max(0, tgt * 1.0 - r.dsTongCT);
-  const con110 = Math.max(0, tgt * 1.1 - r.dsTongCT);
-  const con120 = Math.max(0, tgt * 1.2 - r.dsTongCT);
+  // DS còn lại để đạt mức tháng
+  const con100 = Math.max(0, tgt * 1.00 - r.dsTongCT);
+  const con115 = Math.max(0, tgt * 1.15 - r.dsTongCT);
+  const con125 = Math.max(0, tgt * 1.25 - r.dsTongCT);
+  const con135 = Math.max(0, tgt * 1.35 - r.dsTongCT);
 
   // PTML threshold (61%)
   const PTML_THR = 0.61;
@@ -153,12 +156,12 @@ function _buildCard(r, quy) {
     <div class="kc-chart">
       ${_miniBar(t1,  chartMax, qc.thang1 || 'T-2', false)}
       ${_miniBar(t2,  chartMax, qc.thang2 || 'T-1', false)}
-      ${_miniBar(t3,  chartMax, qc.thang3 || 'T.này', false)}
-      ${_miniBar(tgt, chartMax, 'KH tháng', true)}
+      ${_miniBar(t3,   chartMax, qc.thang3 || 'T.này', false)}
+      ${_miniBar(tQuy, chartMax, 'Tổng DS Quý', false)}
     </div>
     <div class="kc-chart-footer">
       <span class="kc-chart-actual">Lũy kế quý</span>
-      <span class="kc-chart-target">${_M(t1+t2+t3)} / ${_M((quy?.t1Target||0)*1e6+(quy?.t2Target||0)*1e6+tgt)}</span>
+      <span class="kc-chart-target">${_M(tQuy)} / ${_M(tQuyTarget)}</span>
     </div>`;
 
   // Tổng hợp KPI
@@ -185,8 +188,9 @@ function _buildCard(r, quy) {
   // DS còn lại
   const conLai = [
     { label: 'Mức 100%', val: con100 },
-    { label: 'Mức 110%', val: con110 },
-    { label: 'Mức 120%', val: con120 },
+    { label: 'Mức 115%', val: con115 },
+    { label: 'Mức 125%', val: con125 },
+    { label: 'Mức 135%', val: con135 },
   ].map(c => `
     <div class="kc-con-row">
       <span class="kc-con-label">${c.label}</span>
@@ -268,7 +272,7 @@ function _buildCard(r, quy) {
       <div class="kc-sp-body">${spRows}</div>
     </div>
     <div class="kc-section kc-section-third">
-      <div class="kc-section-title">DS CÒN LẠI ĐỂ ĐẠT MỨC
+      <div class="kc-section-title">DS CÒN LẠI ĐỂ ĐẠT MỨC THÁNG
         <span class="kc-section-note">${qc.quyLabel}</span>
       </div>
       <div class="kc-con-body">${conLai}</div>
