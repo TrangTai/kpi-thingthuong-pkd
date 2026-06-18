@@ -1165,3 +1165,62 @@ th[title]:not([title=""]) { cursor: help; }
   position: relative;
   box-sizing: border-box;
 }
+
+/* ============================================================
+   CHECK-IN TAB
+   ============================================================ */
+#checkin-section { padding: 0 0 40px; }
+.ci-upload-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: #F4F6FA; border-bottom: 1px solid #D5DCE8;
+  padding: 12px 20px;
+}
+.ci-upload-bar label.upload-label { margin: 0; }
+#btn-checkin-calc {
+  background: var(--navy); color: #fff;
+  border: none; border-radius: 6px; padding: 7px 18px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+}
+#btn-checkin-calc:disabled { opacity: .5; cursor: not-allowed; }
+#checkin-output { padding: 12px 16px; }
+.ci-info { font-size: 12px; color: #555; margin-bottom: 8px; }
+.ci-table-wrap { overflow-x: auto; }
+.ci-table {
+  border-collapse: collapse;
+  font-size: 11.5px;
+  white-space: nowrap;
+  background: #fff;
+  min-width: 600px;
+}
+.ci-table th, .ci-table td {
+  border: 1px solid #C8D0DC;
+  padding: 3px 6px;
+  text-align: center;
+}
+.ci-hdr {
+  background: #1A3A6B; color: #fff;
+  font-weight: 700; font-size: 11px;
+  position: sticky; top: 0; z-index: 2;
+}
+.ci-day-hdr {
+  background: #0057A8; color: #fff;
+  font-size: 10.5px; font-weight: 700;
+  position: sticky; top: 0;
+}
+.ci-day-hdr.ci-sun { background: #7B1E1E; }
+.ci-sub {
+  background: #D6E8F8; color: #1A3A6B;
+  font-size: 10px; font-weight: 600;
+}
+.ci-sub.ci-sun { background: #FAD5D5; color: #7B1E1E; }
+.ci-sub-ds { background: #C4E0F5; }
+.ci-stt { width: 28px; color: #888; font-size: 10px; }
+.ci-name { text-align: left; min-width: 120px; font-weight: 500; }
+.ci-area { text-align: left; min-width: 90px; color: #444; }
+.ci-total { text-align: right; font-weight: 700; color: #1A3A6B; min-width: 90px; }
+.ci-ci { color: #0057A8; font-weight: 600; }
+.ci-ds { color: #555; }
+.ci-ds-val { color: #0A5E0A; font-weight: 600; }
+.ci-grp-row { background: #EBF0F8 !important; }
+.ci-grp-row td { font-weight: 700; color: #1A3A6B; }
+.ci-table tbody tr:hover { background: #F0F6FF; }

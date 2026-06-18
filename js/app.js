@@ -90,6 +90,7 @@ function initAdminApp() {
   document.getElementById('btn-export').addEventListener('click', onExport);
   document.getElementById('btn-clear').addEventListener('click', onClear);
   document.getElementById('btn-config').addEventListener('click', toggleFormulaPanel);
+  setupCheckInUpload();
 
   loadConfigFromStorage();
   loadStaticFromStorage();
@@ -110,6 +111,7 @@ async function initQLBHApp(userDoc) {
 
   setupFileInput('input-don-hang-qlbh', 'badge-don-hang-qlbh', 'label-don-hang-qlbh', f => { uploadedFiles.donHangQLBH = f; });
   document.getElementById('btn-qlbh-calculate')?.addEventListener('click', () => onQLBHCalculate(userDoc));
+  setupCheckInUpload();
 
   const statusEl = document.getElementById('cloud-status');
   try {
@@ -181,6 +183,7 @@ async function initTPKDApp(userDoc) {
 
   setupFileInput('input-don-hang-qlbh', 'badge-don-hang-qlbh', 'label-don-hang-qlbh', f => { uploadedFiles.donHangQLBH = f; });
   document.getElementById('btn-qlbh-calculate')?.addEventListener('click', () => onTPKDCalculate());
+  setupCheckInUpload();
 
   // Wire up export button for TPKD
   const exportBtn = document.getElementById('btn-qlbh-export');
@@ -285,6 +288,56 @@ async function onChangeUserPassword() {
     alert('Lỗi: ' + err.message);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '🔒 Đổi mật khẩu'; }
+  }
+}
+
+// ─── Check-in tab ────────────────────────────────────────────
+let _checkInRaw = null; // parsed check-in data
+
+function setupCheckInUpload() {
+  const input = document.getElementById('input-checkin');
+  if (!input) return;
+  input.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    document.getElementById('label-checkin').textContent = file.name;
+    document.getElementById('badge-checkin').textContent = '✓ ' + file.name.replace(/\.[^.]+$/, '');
+    document.getElementById('badge-checkin').style.background = '#16A34A';
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        _checkInRaw = parseCheckInFile(ev.target.result);
+        document.getElementById('checkin-status').textContent =
+          `${_checkInRaw.records.length.toLocaleString()} bản ghi · T${_checkInRaw.month}/${_checkInRaw.year}`;
+        document.getElementById('btn-checkin-calc').disabled = false;
+      } catch(err) {
+        document.getElementById('checkin-status').textContent = 'Lỗi đọc file: ' + err.message;
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function onCheckInCalculate() {
+  if (!_checkInRaw) { alert('Vui lòng upload file Check-in trước.'); return; }
+  const btn = document.getElementById('btn-checkin-calc');
+  const out  = document.getElementById('checkin-output');
+  btn.disabled = true; btn.textContent = '⏳ Đang tính...';
+  out.innerHTML = '<div style="padding:24px;color:#888">Đang xử lý...</div>';
+
+  try {
+    // Get orders: prefer admin's local orders, fallback to cloud results for DS total only
+    let orders = staticData.donHangOrders || [];
+    if (staticData.dhLonOrders?.length) orders = orders.concat(staticData.dhLonOrders);
+
+    const targets = staticData.targets || null;
+    const reportData = calculateCheckInReport(_checkInRaw, orders, targets);
+    out.innerHTML = renderCheckInTable(reportData);
+  } catch(err) {
+    out.innerHTML = `<div style="padding:20px;color:red">Lỗi: ${err.message}</div>`;
+    console.error(err);
+  } finally {
+    btn.disabled = false; btn.textContent = '📊 Tính Check-in';
   }
 }
 
@@ -779,16 +832,18 @@ function applyFormulaConfig() {
 
 // ─── Tab switching ───────────────────────────────────────────
 function switchTab(tab) {
-  ['tinh-thuong', 'bao-cao', 'mien-report'].forEach(t => {
+  ['tinh-thuong', 'bao-cao', 'mien-report', 'checkin'].forEach(t => {
     const btn = document.getElementById('tab-btn-' + t);
     if (btn) btn.classList.toggle('tab-active', t === tab);
   });
   const outputEl    = document.querySelector('.output-section');
   const analyticsEl = document.getElementById('analytics-section');
   const mienEl      = document.getElementById('mien-report-section');
-  if (outputEl)    outputEl.style.display    = tab === 'tinh-thuong'  ? '' : 'none';
-  if (analyticsEl) analyticsEl.style.display = tab === 'bao-cao'      ? '' : 'none';
-  if (mienEl)      mienEl.style.display      = tab === 'mien-report'  ? '' : 'none';
+  const checkinEl   = document.getElementById('checkin-section');
+  if (outputEl)    outputEl.style.display    = tab === 'tinh-thuong' ? '' : 'none';
+  if (analyticsEl) analyticsEl.style.display = tab === 'bao-cao'     ? '' : 'none';
+  if (mienEl)      mienEl.style.display      = tab === 'mien-report' ? '' : 'none';
+  if (checkinEl)   checkinEl.style.display   = tab === 'checkin'     ? '' : 'none';
   if (tab === 'bao-cao'     && lastCalcData) renderAnalytics(lastCalcData.results);
   if (tab === 'mien-report' && lastCalcData) renderMienReport(lastCalcData.results);
 }
