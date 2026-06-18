@@ -1224,3 +1224,30 @@ th[title]:not([title=""]) { cursor: help; }
 .ci-grp-row { background: #EBF0F8 !important; }
 .ci-grp-row td { font-weight: 700; color: #1A3A6B; }
 .ci-table tbody tr:hover { background: #F0F6FF; }
+
+/* Check-in toolbar & filter */
+.ci-toolbar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 16px 6px;
+  border-bottom: 1px solid #D5DCE8;
+  background: #F4F6FA;
+}
+.ci-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.ci-select {
+  font-size: 12px; padding: 4px 8px; border-radius: 5px;
+  border: 1px solid #B0BDD0; background: #fff; color: #1A3A6B;
+  cursor: pointer;
+}
+.ci-screenshot-btn {
+  margin-left: auto;
+  background: #fff; color: #0057A8;
+  border: 1.5px solid #0057A8; border-radius: 6px;
+  padding: 4px 12px; font-size: 12px; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+}
+.ci-screenshot-btn:hover { background: #EBF3FC; }
+.ci-screenshot-btn:disabled { opacity: .5; cursor: not-allowed; }
+/* Miền column */
+.ci-mien { min-width: 70px; color: #444; text-align: left; }
+/* Red highlight: check-in but no DS */
+.ci-no-ds { background: #FDECEC !important; color: #C0392B !important; font-weight: 700; }
