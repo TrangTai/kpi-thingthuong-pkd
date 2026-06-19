@@ -185,7 +185,7 @@ async function fbLoadCheckIn() {
 // ── KH Mới: chunked save/load (Firestore doc limit ~1MB) ───────
 const _KM_CHUNK = 2500; // items per chunk for dskhList
 
-async function fbSaveKhMoiData(dskhList, donHang6Summary) {
+async function fbSaveKhMoiData(dskhList, donHang6Summary, currentDsMap) {
   // ── 1. Save dskhList in chunks ──────────────────────────────
   const dskhChunks = [];
   for (let i = 0; i < dskhList.length; i += _KM_CHUNK)
@@ -246,12 +246,21 @@ async function fbSaveKhMoiData(dskhList, donHang6Summary) {
       });
     }
   }
+
+  // ── 3. Save currentDsMap (current month DS per KH) ─────────
+  if (currentDsMap && Object.keys(currentDsMap).length > 0) {
+    await db.collection('meta').doc('khMoiCurrentDs').set({
+      data: JSON.stringify(currentDsMap),
+      savedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  }
 }
 
 async function fbLoadKhMoiData() {
-  const [dskhSnap, dh6Snap] = await Promise.all([
+  const [dskhSnap, dh6Snap, cdSnap] = await Promise.all([
     db.collection('meta').doc('khMoiDskh').get(),
     db.collection('meta').doc('khMoi6Thang').get(),
+    db.collection('meta').doc('khMoiCurrentDs').get(),
   ]);
 
   // ── Load dskhList ───────────────────────────────────────────
@@ -291,7 +300,13 @@ async function fbLoadKhMoiData() {
     }
   }
 
-  return { dskhList, donHang6Summary };
+  // ── Load currentDsMap ───────────────────────────────────────
+  let currentDsMap = null;
+  if (cdSnap.exists) {
+    try { currentDsMap = JSON.parse(cdSnap.data().data || '{}'); } catch { currentDsMap = null; }
+  }
+
+  return { dskhList, donHang6Summary, currentDsMap };
 }
 
 async function fbCreateQLBHAccounts(targets) {

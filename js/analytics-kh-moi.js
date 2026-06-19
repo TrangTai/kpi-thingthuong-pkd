@@ -281,7 +281,7 @@ function _buildTdvRow(t, historyLabel, currentMonthLabel) {
 <div class="km-tdv-block" data-mien="${t.mien || ''}" data-matdv="${t.maTDV}">
   <div class="km-tdv-header" onclick="toggleKhMoiTDV('${id}')">
     <span class="km-toggle-icon" id="icon-${id}">▶</span>
-    <span class="km-tdv-name">${t.tenTDV}</span>
+    <span class="km-tdv-name"><b>${t.maTDV}</b>${t.tenTDV && t.tenTDV !== t.maTDV ? ' · ' + t.tenTDV : ''}</span>
     <span class="km-tdv-area">${t.khuVuc || ''}</span>
     <span class="km-tdv-mien">${t.mien || ''}</span>
     <span class="km-badge km-badge-total">Tổng ${t.khList.length} KH</span>

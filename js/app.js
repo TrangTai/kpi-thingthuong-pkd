@@ -305,8 +305,9 @@ async function onChangeUserPassword() {
 }
 
 // ─── KH Mới tab ──────────────────────────────────────────────
-let _khMoiDskhList   = null; // parsed DSKH.xlsx
-let _khMoi6ThangData = null; // parsed DONHANG_6_THANG: {maKH → totalDS6M}
+let _khMoiDskhList        = null; // parsed DSKH.xlsx
+let _khMoi6ThangData      = null; // parsed DONHANG_6_THANG: {maKH → totalDS6M}
+let _lastKhMoiCurrentDsMap = null; // {maKH → thisMonthDS} computed on last calculate, saved to cloud
 let _qData           = null; // quarterly data from DONHANG_6_THANG: {byTdvMonth, byMaSP, bySPKhSet}
 let _qSpNhom         = null; // SP→Nhóm mapping: {maSP → nhomName}
 
@@ -365,6 +366,14 @@ async function onKhMoiCalculate() {
   try {
     let currentOrders = staticData.donHangOrders || [];
     if (staticData.dhLonOrders?.length) currentOrders = currentOrders.concat(staticData.dhLonOrders);
+
+    // Pre-compute current month DS map so it can be saved to cloud for QLBH to use later
+    _lastKhMoiCurrentDsMap = {};
+    currentOrders.forEach(o => {
+      const k = (o.maKH || '').trim();
+      if (k) _lastKhMoiCurrentDsMap[k] = (_lastKhMoiCurrentDsMap[k] || 0) + (o.doanhSo || 0);
+    });
+
     const result = calculateKhMoi(_khMoiDskhList, _khMoi6ThangData, currentOrders);
     out.innerHTML = renderKhMoiTab(result);
 
@@ -398,7 +407,7 @@ async function onSaveKhMoiCloud() {
   if (statusEl) statusEl.textContent = '';
   try {
     const dh6Summary = { khMap: _khMoi6ThangData.khMap, months: _khMoi6ThangData.months };
-    await fbSaveKhMoiData(_khMoiDskhList, dh6Summary);
+    await fbSaveKhMoiData(_khMoiDskhList, dh6Summary, _lastKhMoiCurrentDsMap);
     if (statusEl) statusEl.innerHTML = '<span style="color:#16A34A;font-weight:600">☁ Đã lưu Cloud thành công</span>';
   } catch(err) {
     if (statusEl) statusEl.innerHTML = `<span style="color:#C0392B">⚠ Lỗi lưu: ${err.message}</span>`;
@@ -429,6 +438,10 @@ async function onLoadKhMoiCloud() {
 
     let currentOrders = staticData.donHangOrders || [];
     if (staticData.dhLonOrders?.length) currentOrders = currentOrders.concat(staticData.dhLonOrders);
+    // If no live orders but cloud has saved currentDsMap, synthesize orders from it
+    if (currentOrders.length === 0 && d.currentDsMap && Object.keys(d.currentDsMap).length > 0) {
+      currentOrders = Object.entries(d.currentDsMap).map(([maKH, doanhSo]) => ({ maKH, doanhSo }));
+    }
     const result = calculateKhMoi(dskhForCalc, _khMoi6ThangData, currentOrders);
     out.innerHTML = renderKhMoiTab(result);
 
