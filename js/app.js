@@ -61,6 +61,7 @@ function showLoginScreen() {
 }
 
 function showApp(userDoc) {
+  _currentUserDoc = userDoc;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app-main').style.display = '';
   document.getElementById('user-bar-name').textContent = userDoc.tenTDV || userDoc.maTDV;
@@ -116,6 +117,12 @@ async function initQLBHApp(userDoc) {
   setupCheckInUpload();
   setupKhMoiUpload();
   setupQuarterlyUpload();
+
+  // QLBH should not be able to overwrite shared cloud data
+  const saveCI = document.getElementById('btn-checkin-save-cloud');
+  const saveKM = document.getElementById('btn-khmoi-save-cloud');
+  if (saveCI) saveCI.style.display = 'none';
+  if (saveKM) saveKM.style.display = 'none';
 
   const statusEl = document.getElementById('cloud-status');
   try {
@@ -414,9 +421,15 @@ async function onLoadKhMoiCloud() {
     _khMoiDskhList   = d.dskhList;
     _khMoi6ThangData = d.donHang6Summary;
 
+    // QLBH: only calculate for their team's TDVs
+    const teamCodes = _getTeamTdvCodes();
+    const dskhForCalc = teamCodes
+      ? _khMoiDskhList.filter(kh => teamCodes.has((kh.maTDV || '').toUpperCase()))
+      : _khMoiDskhList;
+
     let currentOrders = staticData.donHangOrders || [];
     if (staticData.dhLonOrders?.length) currentOrders = currentOrders.concat(staticData.dhLonOrders);
-    const result = calculateKhMoi(_khMoiDskhList, _khMoi6ThangData, currentOrders);
+    const result = calculateKhMoi(dskhForCalc, _khMoi6ThangData, currentOrders);
     out.innerHTML = renderKhMoiTab(result);
 
     document.querySelectorAll('#kpi-tbody tr[data-matdv]').forEach(tr => {
@@ -427,9 +440,12 @@ async function onLoadKhMoiCloud() {
     });
 
     const s = document.getElementById('khmoi-cloud-status');
-    if (s) s.textContent = `☁ Tải từ Cloud · ${_khMoiDskhList.length} KH`;
+    const mienLabel = teamCodes ? ` · ${_currentUserDoc.tenTDV || ''}` : '';
+    if (s) s.textContent = `☁ Tải từ Cloud · ${dskhForCalc.length} KH${mienLabel}`;
+
+    // Only enable save for non-QLBH
     const saveBtn = document.getElementById('btn-khmoi-save-cloud');
-    if (saveBtn) saveBtn.disabled = false;
+    if (saveBtn) saveBtn.disabled = _isQLBH();
   } catch(err) {
     out.innerHTML = `<div style="padding:20px;color:red">Lỗi tải Cloud: ${err.message}</div>`;
   } finally {
@@ -532,6 +548,17 @@ async function onCheckInCalculate() {
   }
 }
 
+// ─── Role helpers ─────────────────────────────────────────────
+function _isQLBH() {
+  return _currentUserDoc?.role === 'qlbh';
+}
+
+// Returns Set<maTDV> for QLBH's team (from lastCalcData), or null for admin
+function _getTeamTdvCodes() {
+  if (!_isQLBH() || !lastCalcData?.results?.length) return null;
+  return new Set(lastCalcData.results.map(r => (r.maTDV || '').toUpperCase()).filter(Boolean));
+}
+
 async function onSaveCheckInCloud() {
   const btn = document.getElementById('btn-checkin-save-cloud');
   const statusEl = document.getElementById('checkin-cloud-status');
@@ -562,12 +589,22 @@ async function onLoadCheckInCloud() {
       out.innerHTML = '<div style="padding:20px;color:#888">Chưa có dữ liệu Check-in trên Cloud. Admin cần Tính Check-in rồi nhấn <b>☁ Lưu Cloud</b>.</div>';
       return;
     }
-    _lastCheckInReport = data;
-    out.innerHTML = renderCheckInTable(data);
+
+    // QLBH: only show their team's TDVs
+    const teamCodes = _getTeamTdvCodes();
+    const viewData = teamCodes
+      ? { ...data, rows: data.rows.filter(r => teamCodes.has((r.maTDV||'').toUpperCase())) }
+      : data;
+
+    _lastCheckInReport = data; // keep full data for admin save
+    out.innerHTML = renderCheckInTable(viewData);
     const statusEl = document.getElementById('checkin-cloud-status');
-    if (statusEl) statusEl.textContent = `☁ Tải từ Cloud · T${data.month}/${data.year}`;
+    const mienLabel = teamCodes ? ` · ${_currentUserDoc.tenTDV || ''}` : '';
+    if (statusEl) statusEl.textContent = `☁ Tải từ Cloud · T${data.month}/${data.year}${mienLabel}`;
+
+    // Only enable save for non-QLBH (QLBH should not overwrite shared cloud data)
     const saveBtn = document.getElementById('btn-checkin-save-cloud');
-    if (saveBtn) saveBtn.disabled = false;
+    if (saveBtn) saveBtn.disabled = _isQLBH();
   } catch(err) {
     out.innerHTML = `<div style="padding:20px;color:red">Lỗi tải Cloud: ${err.message}</div>`;
   } finally {
@@ -723,7 +760,8 @@ function loadStaticFromStorage() {
 }
 
 // ─── Tính Thưởng ─────────────────────────────────────────────
-let lastCalcData = null;
+let lastCalcData    = null;
+let _currentUserDoc = null; // set on login, used for role-based filtering
 
 async function onCalculate() {
   const btn    = document.getElementById('btn-calculate');
