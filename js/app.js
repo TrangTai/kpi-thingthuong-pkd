@@ -92,6 +92,7 @@ function initAdminApp() {
   document.getElementById('btn-config').addEventListener('click', toggleFormulaPanel);
   setupCheckInUpload();
   setupKhMoiUpload();
+  setupQuarterlyUpload();
 
   loadConfigFromStorage();
   loadStaticFromStorage();
@@ -114,6 +115,7 @@ async function initQLBHApp(userDoc) {
   document.getElementById('btn-qlbh-calculate')?.addEventListener('click', () => onQLBHCalculate(userDoc));
   setupCheckInUpload();
   setupKhMoiUpload();
+  setupQuarterlyUpload();
 
   const statusEl = document.getElementById('cloud-status');
   try {
@@ -187,6 +189,7 @@ async function initTPKDApp(userDoc) {
   document.getElementById('btn-qlbh-calculate')?.addEventListener('click', () => onTPKDCalculate());
   setupCheckInUpload();
   setupKhMoiUpload();
+  setupQuarterlyUpload();
 
   // Wire up export button for TPKD
   const exportBtn = document.getElementById('btn-qlbh-export');
@@ -297,6 +300,8 @@ async function onChangeUserPassword() {
 // ─── KH Mới tab ──────────────────────────────────────────────
 let _khMoiDskhList   = null; // parsed DSKH.xlsx
 let _khMoi6ThangData = null; // parsed DONHANG_6_THANG: {maKH → totalDS6M}
+let _qData           = null; // quarterly data from DONHANG_6_THANG: {byTdvMonth, byMaSP, bySPKhSet}
+let _qSpNhom         = null; // SP→Nhóm mapping: {maSP → nhomName}
 
 function setupKhMoiUpload() {
   const inputDskh = document.getElementById('input-khmoi-dskh');
@@ -325,6 +330,8 @@ function setupKhMoiUpload() {
       reader.onload = ev => {
         try {
           _khMoi6ThangData = parseDonHang6Thang(ev.target.result);
+          // Also store extended quarterly data
+          _qData = { byTdvMonth: _khMoi6ThangData.byTdvMonth || {}, byMaSP: _khMoi6ThangData.byMaSP || {}, bySPKhSet: _khMoi6ThangData.bySPKhSet || {} };
           const n = Object.keys(_khMoi6ThangData.khMap || {}).length;
           document.getElementById('khmoi-status').textContent =
             (_khMoiDskhList ? `DSKH: ${_khMoiDskhList.length} KH · ` : '') +
@@ -410,6 +417,48 @@ async function onLoadKhMoiCloud() {
     out.innerHTML = `<div style="padding:20px;color:red">Lỗi tải Cloud: ${err.message}</div>`;
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '☁ Tải Cloud'; }
+  }
+}
+
+// ─── Báo Cáo Quý tab ─────────────────────────────────────────
+function setupQuarterlyUpload() {
+  const inp = document.getElementById('input-sp-nhom');
+  if (!inp) return;
+  inp.addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    document.getElementById('label-sp-nhom').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        _qSpNhom = parseSpNhomFile(ev.target.result);
+        const n = Object.keys(_qSpNhom).length;
+        document.getElementById('quy-status').textContent = `Mapping: ${n} SP`;
+      } catch(err) { alert('Lỗi đọc SP Nhóm: ' + err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function onQuarterlyCalculate() {
+  const out = document.getElementById('quy-output');
+  const btn = document.getElementById('btn-quy-calc');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang tạo...'; }
+  out.innerHTML = '<div style="padding:24px;color:#888">Đang xử lý...</div>';
+  try {
+    let currentOrders = staticData.donHangOrders || [];
+    if (staticData.dhLonOrders?.length) currentOrders = currentOrders.concat(staticData.dhLonOrders);
+    if (!currentOrders.length) {
+      out.innerHTML = '<div style="padding:24px;color:#C0392B">Cần tính Tính Thưởng trước (cần dữ liệu ĐƠN HÀNG tháng hiện tại).</div>';
+      return;
+    }
+    const result = calculateQuarterlyReport(_qData, currentOrders, _qSpNhom, staticData.targets || []);
+    out.innerHTML = renderQuarterlyReport(result);
+    setTimeout(() => initQuyCharts(), 80);
+  } catch(err) {
+    out.innerHTML = `<div style="padding:24px;color:red">Lỗi: ${err.message}</div>`;
+    console.error(err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📅 Tạo Báo Cáo Quý'; }
   }
 }
 
@@ -981,7 +1030,7 @@ function applyFormulaConfig() {
 
 // ─── Tab switching ───────────────────────────────────────────
 function switchTab(tab) {
-  ['tinh-thuong', 'bao-cao', 'mien-report', 'checkin', 'kh-moi'].forEach(t => {
+  ['tinh-thuong', 'bao-cao', 'mien-report', 'checkin', 'kh-moi', 'quy'].forEach(t => {
     const btn = document.getElementById('tab-btn-' + t);
     if (btn) btn.classList.toggle('tab-active', t === tab);
   });
@@ -990,11 +1039,13 @@ function switchTab(tab) {
   const mienEl      = document.getElementById('mien-report-section');
   const checkinEl   = document.getElementById('checkin-section');
   const khMoiEl     = document.getElementById('kh-moi-section');
+  const quyEl       = document.getElementById('quy-section');
   if (outputEl)    outputEl.style.display    = tab === 'tinh-thuong' ? '' : 'none';
   if (analyticsEl) analyticsEl.style.display = tab === 'bao-cao'     ? '' : 'none';
   if (mienEl)      mienEl.style.display      = tab === 'mien-report' ? '' : 'none';
   if (checkinEl)   checkinEl.style.display   = tab === 'checkin'     ? '' : 'none';
   if (khMoiEl)     khMoiEl.style.display     = tab === 'kh-moi'      ? '' : 'none';
+  if (quyEl)       quyEl.style.display       = tab === 'quy'         ? '' : 'none';
   if (tab === 'bao-cao'     && lastCalcData) renderAnalytics(lastCalcData.results);
   if (tab === 'mien-report' && lastCalcData) renderMienReport(lastCalcData.results);
 }

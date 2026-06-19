@@ -1424,6 +1424,106 @@ th[title]:not([title=""]) { cursor: help; }
 .btn-cloud-sm:hover { background: #3366A0; }
 
 /* ============================================================
+   BÁO CÁO QUÝ
+   ============================================================ */
+#quy-report-wrap { font-family: 'Inter', system-ui, sans-serif; color: #1A2332; max-width: 1080px; margin: 0 auto; }
+
+/* Header */
+.quy-header { background: linear-gradient(135deg, #003D77 0%, #1A6BB5 100%); color: #fff; padding: 20px 28px; border-radius: 10px 10px 0 0; display: flex; align-items: center; justify-content: space-between; }
+.quy-header-left { display: flex; align-items: center; gap: 16px; }
+.quy-logo-circle { width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,.2); color: #fff; font-size: 22px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.quy-header-sup   { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; opacity: .8; }
+.quy-header-title { font-size: 22px; font-weight: 700; line-height: 1.2; }
+.quy-header-sub   { font-size: 12px; opacity: .7; margin-top: 2px; }
+.quy-header-brand { font-size: 18px; font-weight: 800; letter-spacing: 1px; text-align: right; color: #7ECDF5; }
+
+/* KPI Cards */
+.quy-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; background: #fff; border: 1px solid #DDE3EC; border-top: none; }
+.quy-kpi-card { padding: 18px 20px; border-right: 1px solid #DDE3EC; }
+.quy-kpi-card:last-child { border-right: none; }
+.quy-kpi-label { font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: #7A8DA8; }
+.quy-kpi-val   { font-size: 30px; font-weight: 800; color: #003D77; line-height: 1.1; margin: 4px 0; }
+.quy-kpi-sub   { font-size: 11px; color: #6B7B92; }
+
+/* Sections */
+.quy-section   { background: #F4F7FB; padding: 16px; margin-top: 12px; border-radius: 8px; }
+.quy-sec-hdr   { font-size: 13px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #003D77; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.quy-sec-num   { width: 24px; height: 24px; border-radius: 50%; background: #003D77; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+
+/* Chart Cards */
+.quy-chart-card  { background: #fff; border: 1px solid #DDE3EC; border-radius: 8px; padding: 16px; }
+.quy-chart-title { font-size: 12px; font-weight: 700; color: #2C3E56; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.quy-chart-unit  { font-size: 10px; font-weight: 400; color: #9AABB9; }
+.quy-chart-grid  { display: grid; gap: 12px; }
+.quy-chart-grid-2{ grid-template-columns: 1fr 1fr; }
+.quy-chart-grid-3{ grid-template-columns: 2fr 1fr; }
+.quy-span-2      { grid-column: span 2; }
+
+/* Chart 01 extras */
+.quy-ds-total-row { font-size: 12px; color: #7A8DA8; margin-top: 8px; text-align: center; }
+.quy-ds-total-row b { color: #003D77; }
+
+/* Chart 03 big pct */
+.quy-big-pct     { font-size: 52px; font-weight: 800; color: #003D77; text-align: center; line-height: 1; margin: 20px 0 8px; }
+.quy-big-pct-sub { font-size: 12px; color: #6B7B92; text-align: center; line-height: 1.5; }
+
+/* Chart 04 DPKH */
+.quy-dpkh-row      { display: flex; align-items: stretch; gap: 16px; }
+.quy-dpkh-total-box{ background: #EBF4FC; border-radius: 8px; padding: 20px 24px; min-width: 160px; display: flex; flex-direction: column; justify-content: center; text-align: center; }
+.quy-dpkh-total-label{ font-size: 10px; font-weight: 700; letter-spacing: .8px; color: #4A7FB5; text-transform: uppercase; }
+.quy-dpkh-total-num  { font-size: 36px; font-weight: 800; color: #003D77; line-height: 1.1; }
+.quy-dpkh-total-sub  { font-size: 11px; color: #7A8DA8; margin-top: 4px; }
+
+/* Tables (05, 06) */
+.quy-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.quy-tbl thead th { background: #F0F4FA; padding: 7px 10px; text-align: left; font-weight: 600; color: #2C3E56; border-bottom: 2px solid #D1DCE8; font-size: 11px; }
+.quy-tbl tbody td { padding: 6px 10px; border-bottom: 1px solid #EEF2F7; }
+.quy-tbl tbody tr:hover td { background: #F8FAFC; }
+.quy-tbl-total td { font-weight: 700; background: #F0F4FA !important; border-top: 2px solid #D1DCE8; }
+.quy-tl-good { color: #007A3D; font-weight: 700; }
+.quy-tl-warn { color: #B8660A; }
+.quy-tl-bad  { color: #C0392B; }
+
+/* Chart 07 DPMH bars */
+.quy-dpmh-row   { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; }
+.quy-dpmh-name  { min-width: 120px; color: #333; }
+.quy-dpmh-nums  { min-width: 50px; color: #6B7B92; font-size: 10px; }
+.quy-dpmh-bars  { flex: 1; position: relative; height: 14px; background: #F0F4FA; border-radius: 3px; overflow: hidden; }
+.quy-dpmh-bar-tgt { position: absolute; top: 0; left: 0; height: 100%; background: #B0C4DE; border-radius: 3px; }
+.quy-dpmh-bar-quy { position: absolute; top: 2px; left: 0; height: 10px; background: #003D77; border-radius: 2px; }
+.quy-legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: middle; margin-right: 2px; }
+
+/* Charts 08, 09 bar rows */
+.quy-bar-row    { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 12px; }
+.quy-bar-label  { min-width: 110px; color: #333; }
+.quy-bar-wrap   { flex: 1; height: 14px; background: #EEF2F7; border-radius: 4px; overflow: hidden; }
+.quy-bar-fill   { height: 100%; border-radius: 4px; transition: width .3s; }
+.quy-bar-blue   { background: #3A7BD5; }
+.quy-bar-green  { background: #27AE60; }
+.quy-bar-cyan   { background: #00BCD4; }
+.quy-bar-val    { min-width: 52px; text-align: right; font-weight: 600; color: #1A2332; }
+.quy-bar-pct    { min-width: 36px; text-align: right; color: #7A8DA8; font-size: 11px; }
+
+/* Chart 10 Top SP */
+.quy-topsp-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.quy-topsp-tbl thead th { background: #1A2332; color: #fff; padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 600; }
+.quy-topsp-tbl tbody tr { border-bottom: 1px solid #EEF2F7; }
+.quy-topsp-tbl tbody tr:hover td { background: #F8FAFC; }
+.quy-topsp-num  { width: 28px; color: #9AABB9; text-align: center; padding: 10px 8px; }
+.quy-topsp-name { padding: 10px 12px; color: #1A2332; }
+.quy-topsp-ds   { width: 80px; text-align: right; padding: 10px 12px; font-weight: 700; color: #003D77; }
+.quy-topsp-bar  { width: 160px; padding: 10px 12px; }
+.quy-topsp-pct  { width: 48px; text-align: right; padding: 10px 12px; color: #00BCD4; font-weight: 600; }
+
+@media (max-width: 768px) {
+  .quy-kpi-grid      { grid-template-columns: 1fr 1fr; }
+  .quy-chart-grid-2  { grid-template-columns: 1fr; }
+  .quy-chart-grid-3  { grid-template-columns: 1fr; }
+  .quy-span-2        { grid-column: span 1; }
+  .quy-dpkh-row      { flex-direction: column; }
+}
+
+/* ============================================================
    KH MỚI TAB
    ============================================================ */
 .km-toolbar {

@@ -88,35 +88,63 @@ function parseDonHang6Thang(arrayBuffer) {
   const cDS     = _fc('tong tien', 'doanh so', 'thanh tien', 'so tien');
   const cNam    = _fc('nam');
   const cThang  = _fc('thang');
+  const cMaTDV  = _fc('ma tdv', 'matdv', 'ma nv', 'manv');
+  const cMaSP   = _fc('ma sp', 'masp', 'ma hang');
+  const cTenSP  = _fc('ten sp', 'tensp', 'ten hang');
 
   if (cMaKH < 0) throw new Error('Không tìm thấy cột "Mã KH" trong DONHANG_6_THANG.xlsx');
   if (cDS    < 0) throw new Error('Không tìm thấy cột "Tổng Tiền" trong DONHANG_6_THANG.xlsx');
 
-  const khMap   = {};
-  const monthSet = new Set();
+  const khMap      = {};
+  const monthSet   = new Set();
+  const byTdvMonth = {}; // {tdv: {yyyymm: {ds, khDsMap:{maKH→ds}, spDsMap:{maSP→ds}}}}
+  const byMaSP     = {}; // {maSP: {tenSP, ds}}
+  const bySPKhSet  = {}; // {maSP: Set<maKH>} — for nhóm DPKH calculation
 
   for (let i = 1; i < rows.length; i++) {
     const row  = rows[i];
     const maKH = String(row[cMaKH] || '').trim();
     if (!maKH) continue;
-    const ds = parseFloat(row[cDS]) || 0;
+    const ds    = parseFloat(row[cDS]) || 0;
+    const maTDV = cMaTDV >= 0 ? String(row[cMaTDV] || '').trim().toUpperCase() : '';
+    const maSP  = cMaSP  >= 0 ? String(row[cMaSP]  || '').trim() : '';
+    const tenSP = cTenSP >= 0 ? String(row[cTenSP] || '').trim() : '';
 
-    // Extract month key
+    // Month key
     let monthKey = null;
     if (cNam >= 0 && cThang >= 0 && row[cNam] && row[cThang]) {
       const y = parseInt(row[cNam]);
       const m = parseInt(row[cThang]);
-      if (y > 2000 && m >= 1 && m <= 12) {
+      if (y > 2000 && m >= 1 && m <= 12)
         monthKey = `${y}-${String(m).padStart(2, '0')}`;
-      }
     }
     if (monthKey) monthSet.add(monthKey);
 
+    // KH total (KH Mới)
     if (!khMap[maKH]) khMap[maKH] = 0;
     khMap[maKH] += ds;
+
+    // Per-TDV per-month (quarterly report)
+    if (maTDV && monthKey) {
+      if (!byTdvMonth[maTDV]) byTdvMonth[maTDV] = {};
+      if (!byTdvMonth[maTDV][monthKey]) byTdvMonth[maTDV][monthKey] = { ds:0, khDsMap:{}, spDsMap:{} };
+      const e = byTdvMonth[maTDV][monthKey];
+      e.ds += ds;
+      e.khDsMap[maKH] = (e.khDsMap[maKH]||0) + ds;
+      if (maSP) e.spDsMap[maSP] = (e.spDsMap[maSP]||0) + ds;
+    }
+
+    // Per-SP totals
+    if (maSP) {
+      if (!byMaSP[maSP]) byMaSP[maSP] = { tenSP: tenSP||maSP, ds:0 };
+      byMaSP[maSP].ds += ds;
+      if (tenSP && !byMaSP[maSP].tenSP) byMaSP[maSP].tenSP = tenSP;
+      if (!bySPKhSet[maSP]) bySPKhSet[maSP] = new Set();
+      bySPKhSet[maSP].add(maKH);
+    }
   }
 
-  return { khMap, months: [...monthSet].sort() };
+  return { khMap, months: [...monthSet].sort(), byTdvMonth, byMaSP, bySPKhSet };
 }
 
 // ─── Calculator ──────────────────────────────────────────────
