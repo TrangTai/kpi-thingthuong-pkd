@@ -8,7 +8,7 @@ let _khMoiReport = null; // last calculated report
 function getKhMoiCount(maTDV) {
   if (!_khMoiReport?.tdvRows) return null;
   const t = _khMoiReport.tdvRows.find(t => t.maTDV === (maTDV || '').trim().toUpperCase());
-  return t ? t.khList.length : 0;
+  return t ? t.khList.filter(k => k.isTinhKhMoi).length : 0;
 }
 
 // ─── Parser helper: remove Vietnamese diacritics for flexible matching ───────
