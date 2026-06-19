@@ -165,6 +165,47 @@ async function fbChangeUserPassword(maTDV, currentPassword, newPassword) {
   if (updateData.error) throw new Error(updateData.error.message);
 }
 
+async function fbSaveCheckIn(month, year, rows, allDays) {
+  await db.collection('meta').doc('checkIn').set({
+    month, year, allDays,
+    rows: JSON.stringify(rows),
+    savedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+}
+
+async function fbLoadCheckIn() {
+  const snap = await db.collection('meta').doc('checkIn').get();
+  if (!snap.exists) return null;
+  const d = snap.data();
+  try {
+    return { month: d.month, year: d.year, allDays: d.allDays || [], rows: JSON.parse(d.rows || '[]') };
+  } catch { return null; }
+}
+
+async function fbSaveKhMoiData(dskhList, donHang6Summary) {
+  await db.collection('meta').doc('khMoiDskh').set({
+    data: JSON.stringify(dskhList),
+    savedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  if (donHang6Summary) {
+    await db.collection('meta').doc('khMoi6Thang').set({
+      data: JSON.stringify(donHang6Summary),
+      savedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+}
+
+async function fbLoadKhMoiData() {
+  const [dskhSnap, dh6Snap] = await Promise.all([
+    db.collection('meta').doc('khMoiDskh').get(),
+    db.collection('meta').doc('khMoi6Thang').get(),
+  ]);
+  return {
+    dskhList:       dskhSnap.exists  ? JSON.parse(dskhSnap.data().data  || '[]') : null,
+    donHang6Summary: dh6Snap.exists  ? JSON.parse(dh6Snap.data().data   || '{}') : null,
+  };
+}
+
 async function fbCreateQLBHAccounts(targets) {
   const qlbhList = targets.filter(t => t.doiTuong && t.doiTuong.trim().toUpperCase() === 'QLBH');
   const out = [];

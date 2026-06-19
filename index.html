@@ -167,6 +167,7 @@
   <button class="tab-btn" id="tab-btn-bao-cao" onclick="switchTab('bao-cao')">📈 Báo cáo</button>
   <button class="tab-btn" id="tab-btn-mien-report" onclick="switchTab('mien-report')">🗺 Theo Miền</button>
   <button class="tab-btn" id="tab-btn-checkin" onclick="switchTab('checkin')">📋 Check-in</button>
+  <button class="tab-btn" id="tab-btn-kh-moi" onclick="switchTab('kh-moi')">🆕 KH Mới</button>
 </div>
 
 <!-- Formula / Config Panel -->
@@ -296,10 +297,37 @@
     <input type="file" id="input-checkin" accept=".xlsx,.xls" style="display:none">
     <span id="label-checkin" class="upload-filename" style="font-size:12px;color:#555"></span>
     <button id="btn-checkin-calc" onclick="onCheckInCalculate()" disabled>📊 Tính Check-in</button>
+    <button id="btn-checkin-load-cloud" class="btn-cloud-sm" onclick="onLoadCheckInCloud()">☁ Tải Cloud</button>
     <span id="checkin-status" style="font-size:12px;color:#888;margin-left:6px"></span>
+    <span id="checkin-cloud-status" style="font-size:11px;color:#4A7FB5;margin-left:8px"></span>
   </div>
   <div id="checkin-output">
-    <div style="padding:32px;text-align:center;color:#aaa;font-size:13px">Upload file check-in rồi nhấn <b>Tính Check-in</b>.</div>
+    <div style="padding:32px;text-align:center;color:#aaa;font-size:13px">Upload file check-in rồi nhấn <b>Tính Check-in</b>, hoặc nhấn <b>☁ Tải Cloud</b> để xem dữ liệu mới nhất.</div>
+  </div>
+</section>
+
+<!-- KH Mới Section -->
+<section id="kh-moi-section" style="display:none">
+  <div class="ci-upload-bar">
+    <label class="upload-label" for="input-khmoi-dskh">
+      <span class="upload-icon">👥</span>
+      <span class="file-badge">DSKH.xlsx</span>
+    </label>
+    <input type="file" id="input-khmoi-dskh" accept=".xlsx,.xls" style="display:none">
+    <span id="label-khmoi-dskh" style="font-size:12px;color:#555;margin-right:10px"></span>
+    <label class="upload-label" for="input-khmoi-dh6">
+      <span class="upload-icon">📋</span>
+      <span class="file-badge">DONHANG_6_THANG.xlsx</span>
+    </label>
+    <input type="file" id="input-khmoi-dh6" accept=".xlsx,.xls" style="display:none">
+    <span id="label-khmoi-dh6" style="font-size:12px;color:#555;margin-right:10px"></span>
+    <button id="btn-khmoi-calc" onclick="onKhMoiCalculate()" disabled>📊 Tính KH Mới</button>
+    <button id="btn-khmoi-load-cloud" class="btn-cloud-sm" onclick="onLoadKhMoiCloud()">☁ Tải Cloud</button>
+    <span id="khmoi-status" style="font-size:12px;color:#888;margin-left:6px"></span>
+    <span id="khmoi-cloud-status" style="font-size:11px;color:#4A7FB5;margin-left:8px"></span>
+  </div>
+  <div id="khmoi-output">
+    <div style="padding:32px;text-align:center;color:#aaa;font-size:13px">Upload DSKH + ĐƠN HÀNG 6 THÁNG rồi nhấn <b>Tính KH Mới</b>, hoặc <b>☁ Tải Cloud</b>.</div>
   </div>
 </section>
 
@@ -339,6 +367,7 @@
 <script src="js/analytics.js"></script>
 <script src="js/analytics-mien.js"></script>
 <script src="js/analytics-checkin.js"></script>
+<script src="js/analytics-kh-moi.js"></script>
 <script src="js/kpi-card.js"></script>
 <script src="js/app.js"></script>
 

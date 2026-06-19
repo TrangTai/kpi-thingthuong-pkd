@@ -23,8 +23,12 @@ function captureKpiCard() {
   if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
   html2canvas(el, {
     backgroundColor: '#fff', scale: 2, useCORS: true, allowTaint: true,
-    scrollX: 0, scrollY: 0,
-    windowWidth: el.scrollWidth, width: el.scrollWidth, height: el.scrollHeight,
+    logging: false,
+    onclone: (doc, cloned) => {
+      cloned.style.position = 'static';
+      cloned.style.overflow = 'visible';
+      cloned.style.maxHeight = 'none';
+    },
   }).then(canvas => {
     const link = document.createElement('a');
     const tdvName = el.querySelector('.kc-info-val')?.textContent?.replace(/\s+/g,'_') || 'KPI';

@@ -1404,4 +1404,81 @@ th[title]:not([title=""]) { cursor: help; }
 
 /* Clickable TDV name in main table */
 .col-name.kc-clickable { cursor: pointer; color: #0057A8; }
+.col-name.kc-clickable:hover { text-decoration: underline; background: #EBF4FC; }
+
+/* ============================================================
+   CHECK-IN TAB — new color rules
+   ============================================================ */
+/* Red: CI count < 15 */
+.ci-low-ci { background: #FDECEC !important; color: #C0392B !important; font-weight: 600; }
+/* Orange: no DS that day */
+.ci-no-ds-day { background: #FFF4E0 !important; color: #A0520F !important; }
+
+/* Small cloud button */
+.btn-cloud-sm {
+  background: #4A7FB5; color: #fff; border: none; border-radius: 4px;
+  padding: 5px 10px; font-size: 12px; cursor: pointer; white-space: nowrap;
+}
+.btn-cloud-sm:hover { background: #3366A0; }
+
+/* ============================================================
+   KH MỚI TAB
+   ============================================================ */
+.km-toolbar {
+  display: flex; align-items: flex-start; flex-wrap: wrap; gap: 10px;
+  padding: 14px 16px; background: #fff; border-bottom: 1px solid #E3E8EF;
+}
+.km-info { flex: 1; }
+.km-info b { display: block; font-size: 14px; color: #003366; font-weight: 700; }
+.km-sub { font-size: 11px; color: #6B7588; }
+.km-summary { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.km-badge {
+  display: inline-block; padding: 3px 10px; border-radius: 12px;
+  font-size: 11px; font-weight: 600;
+}
+.km-badge-total { background: #EBF4FC; color: #003D77; }
+.km-badge-ok    { background: #E8F7EE; color: #006E35; }
+.km-badge-miss  { background: #FFF4E0; color: #A0520F; }
+.km-badge-gray  { background: #F0F4F8; color: #4F5867; }
+
+.km-filters {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  padding: 8px 16px; background: #F6F8FB; border-bottom: 1px solid #E3E8EF;
+}
+
+#km-capture-area { padding: 8px 0; }
+
+.km-tdv-block { border-bottom: 1px solid #E3E8EF; }
+.km-tdv-header {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 16px; cursor: pointer; background: #FAFBFC;
+  transition: background 120ms;
+}
+.km-tdv-header:hover { background: #EBF4FC; }
+.km-toggle-icon { font-size: 10px; color: #6B7588; width: 12px; flex-shrink: 0; }
+.km-tdv-name { font-weight: 600; color: #003366; font-size: 13px; }
+.km-tdv-area { font-size: 11px; color: #6B7588; }
+.km-tdv-mien { font-size: 11px; color: #4A7FB5; }
+
+.km-tdv-body { padding: 0; overflow-x: auto; }
+.km-table {
+  width: 100%; border-collapse: collapse; font-size: 12px;
+  min-width: 700px;
+}
+.km-table thead tr { background: #0057A8; color: #fff; }
+.km-table thead th { padding: 7px 10px; text-align: left; font-weight: 600; white-space: nowrap; }
+.km-table tbody tr:nth-child(even) { background: #F6F8FB; }
+.km-table tbody tr:hover { background: #EBF4FC; }
+.km-td-stt  { width: 36px; text-align: center; color: #888; }
+.km-td-makn { font-family: monospace; font-size: 11px; color: #444; }
+.km-td-name { }
+.km-td-ds6m { text-align: right; color: #888; }
+.km-td-dscur{ text-align: right; }
+.km-td-tinh { text-align: center; font-weight: 700; }
+.km-table td { padding: 6px 10px; border-bottom: 1px solid #EEF1F6; }
+.km-row-ok   { }
+.km-row-miss { background: #FFF4E0 !important; }
+.km-row-miss:nth-child(even) { background: #FFF0D0 !important; }
+.km-cur-ok   { color: #16A34A; font-weight: 600; }
+.km-tinh-ok  { color: #16A34A; font-size: 15px; }
 .col-name.kc-clickable:hover { text-decoration: underline; background: #EBF3FC; }

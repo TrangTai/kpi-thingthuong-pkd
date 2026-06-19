@@ -15,6 +15,14 @@ const fmt = {
     if (abs >= 1e3) return s + Math.round(abs / 1e3) + 'K';
     return s + abs;
   },
+  // Compact with 1 decimal (108,1M)
+  vndC1: v => {
+    if (v === null || v === undefined || isNaN(v)) return '-';
+    const abs = Math.abs(v), s = v < 0 ? '-' : '';
+    if (abs >= 1e6) return s + (abs / 1e6).toFixed(1).replace('.', ',') + 'M';
+    if (abs >= 1e3) return s + Math.round(abs / 1e3) + 'K';
+    return s + Math.round(abs);
+  },
   pct: v => {
     if (v === null || v === undefined || isNaN(v)) return '-';
     return (v * 100).toFixed(1) + '%';
@@ -88,7 +96,7 @@ function renderTable(results, quyMap) {
     { text: 'DS N2',          cls: 'h-actual', nf: 'dsn2',    ph: '>=M', key: r => r.dsN2,         fmt: 'vndC', compact: true, tip: 'DS nhóm 2 (cột Q đơn hàng), không gồm KH CT' },
     { text: 'DS N3 SP Mới',   cls: 'h-actual', nf: 'dsn3',    ph: '>=M', key: r => r.dsN3,         fmt: 'vndC', compact: true, tip: 'DS nhóm PTML 3 (cột R đơn hàng), không gồm KH CT' },
     { text: 'DS Tổng',        cls: 'h-actual', nf: 'dston',   ph: '>=M', key: r => r.dsTong,       fmt: 'vndC', compact: true, tip: 'DS cột J (Tổng tiền), không gồm KH CT' },
-    { text: 'DS T+CT',        cls: 'h-actual', nf: 'dstonct', ph: '>=M', key: r => r.dsTongCT,     fmt: 'vndC', compact: true, tip: 'DS Tổng + DS khách hàng công ty' },
+    { text: 'DS T+CT',        cls: 'h-actual', nf: 'dstonct', ph: '>=M', key: r => r.dsTongCT,     fmt: 'vndC1', compact: true, tip: 'DS Tổng + DS khách hàng công ty' },
     { text: 'DS N15',         cls: 'h-actual', nf: 'dsn15',   ph: '>=M', key: r => r.dsDay15,      fmt: 'vndC', compact: true, tip: 'DS tính đến ngày 15 (retail + CT)' },
     { text: 'ĐPKH',           cls: 'h-actual', nf: 'dpkh',    ph: '>=',  key: r => r.dpkh,         fmt: 'num',  compact: true, tip: 'Số KH có DS ≥ 500.000đ (gồm KH CT)' },
     { text: 'ĐPMH',           cls: 'h-actual', nf: 'dpmh',    ph: '>=',  key: r => r.dpmh,         fmt: 'num',  compact: true, tip: 'Số MH có DS ≥ 500.000đ × số TDV (nhóm TP026/027/030, TB011-018 gộp)' },
@@ -243,6 +251,9 @@ function renderTable(results, quyMap) {
       let cell, tdTitle = '';
       if (c.fmt === 'vndC') {
         cell    = fmt.vndC(val);
+        tdTitle = val ? ` title="${fmt.vnd(val)}"` : '';
+      } else if (c.fmt === 'vndC1') {
+        cell    = fmt.vndC1(val);
         tdTitle = val ? ` title="${fmt.vnd(val)}"` : '';
       } else if (c.fmt === 'vnd')    cell = fmt.vnd(val);
       else if (c.fmt === 'pct')  cell = fmt.pct(val);

@@ -54,6 +54,11 @@ function calculateCheckInReport(ciData, orderRecords, targets) {
   const targetMap = {};
   if (targets) targets.forEach(t => { targetMap[(t.maTDV || '').toUpperCase()] = t; });
 
+  // QLBH set (to exclude their own rows)
+  const qlbhSet = new Set((targets || [])
+    .filter(t => (t.doiTuong || '').toUpperCase() === 'QLBH')
+    .map(t => (t.maTDV || '').toUpperCase()));
+
   // ciMap[maTDV][day] = Set<maKH>
   const ciMap = {};
   records.forEach(r => {
@@ -75,7 +80,9 @@ function calculateCheckInReport(ciData, orderRecords, targets) {
     });
   }
 
-  const rows = Object.keys(ciMap).map(tdv => {
+  const rows = Object.keys(ciMap)
+    .filter(tdv => !qlbhSet.has(tdv))   // exclude QLBH's own rows
+    .map(tdv => {
     const info = targetMap[tdv] || {};
     const totalDS = Object.values(dsMap[tdv] || {}).reduce((s, v) => s + v.ds, 0);
     const totalCI = Object.values(ciMap[tdv] || {}).reduce((s, v) => s + v.size, 0);
@@ -112,26 +119,7 @@ function calculateCheckInReport(ciData, orderRecords, targets) {
 
   const finalRows = [];
   Object.values(qlbhGroups).forEach(grp => {
-    if (grp.rows.length > 1) {
-      const summaryDaily = {};
-      allDays.forEach(day => {
-        summaryDaily[day] = {
-          ciKH: grp.rows.reduce((s, r) => s + (r.daily[day]?.ciKH || 0), 0),
-          ds:   grp.rows.reduce((s, r) => s + (r.daily[day]?.ds   || 0), 0),
-          khDS: 0,
-        };
-      });
-      finalRows.push({
-        isGroup: true,
-        maTDV:   grp.qlbhCode,
-        tenTDV:  'Tổng ' + grp.khuVuc,
-        khuVuc:  grp.khuVuc,
-        mien:    grp.mien,
-        totalDS: grp.rows.reduce((s, r) => s + r.totalDS, 0),
-        totalCI: grp.rows.reduce((s, r) => s + r.totalCI, 0),
-        daily:   summaryDaily,
-      });
-    }
+    // No group summary rows — just show individual TDV rows
     grp.rows.forEach(r => finalRows.push(r));
   });
 
@@ -168,25 +156,26 @@ function _fmtDS(v) {
 
 function _buildCiTableBody(rows, allDays) {
   let stt = 0;
-  return rows.map(row => {
-    if (!row.isGroup) stt++;
-    const isGrp = !!row.isGroup;
-    const trCls = isGrp ? ' class="ci-grp-row"' : '';
+  return rows.filter(r => !r.isGroup).map(row => {
+    stt++;
+    const trCls = '';
     const totalFmt = row.totalDS ? Math.round(row.totalDS / 1e6) + 'M' : '—';
 
     const dayCells = allDays.map(day => {
       const d = row.daily[day] || { ciKH: 0, ds: 0 };
       const ciStr = d.ciKH || '';
       const dsStr = _fmtDS(d.ds);
-      // Red: has check-in but no DS
-      const ciNoDS = d.ciKH > 0 && !d.ds;
-      const ciCls  = 'ci-ci' + (ciNoDS ? ' ci-no-ds' : '');
-      const dsCls  = 'ci-ds' + (d.ds > 0 ? ' ci-ds-val' : '') + (ciNoDS ? ' ci-no-ds' : '');
+      // Red CI: checked in but < 15 KH
+      const ciLow  = d.ciKH > 0 && d.ciKH < 15;
+      // Orange DS: no revenue that day (includes days with CI but no DS)
+      const dsNone = d.ds === 0;
+      const ciCls  = 'ci-ci' + (ciLow ? ' ci-low-ci' : '');
+      const dsCls  = 'ci-ds' + (d.ds > 0 ? ' ci-ds-val' : '') + (dsNone ? ' ci-no-ds-day' : '');
       return `<td class="${ciCls}">${ciStr}</td><td class="${dsCls}">${dsStr}</td>`;
     }).join('');
 
     return `<tr${trCls}>
-      <td class="ci-stt">${isGrp ? '' : stt}</td>
+      <td class="ci-stt">${stt}</td>
       <td class="ci-name">${row.tenTDV}</td>
       <td class="ci-area">${row.khuVuc}</td>
       <td class="ci-mien">${row.mien || ''}</td>
