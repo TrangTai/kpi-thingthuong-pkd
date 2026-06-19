@@ -298,12 +298,13 @@
     <input type="file" id="input-checkin" accept=".xlsx,.xls" style="display:none">
     <span id="label-checkin" class="upload-filename" style="font-size:12px;color:#555"></span>
     <button id="btn-checkin-calc" onclick="onCheckInCalculate()" disabled>📊 Tính Check-in</button>
-    <button id="btn-checkin-load-cloud" class="btn-cloud-sm" onclick="onLoadCheckInCloud()">☁ Tải Cloud</button>
+    <button id="btn-checkin-save-cloud" class="btn-cloud-sm btn-cloud-save" onclick="onSaveCheckInCloud()" disabled>☁ Lưu Cloud</button>
+    <button id="btn-checkin-load-cloud" class="btn-cloud-sm" onclick="onLoadCheckInCloud()">↓ Tải lại</button>
     <span id="checkin-status" style="font-size:12px;color:#888;margin-left:6px"></span>
     <span id="checkin-cloud-status" style="font-size:11px;color:#4A7FB5;margin-left:8px"></span>
   </div>
   <div id="checkin-output">
-    <div style="padding:32px;text-align:center;color:#aaa;font-size:13px">Upload file check-in rồi nhấn <b>Tính Check-in</b>, hoặc nhấn <b>☁ Tải Cloud</b> để xem dữ liệu mới nhất.</div>
+    <div style="padding:32px;text-align:center;color:#aaa;font-size:13px">Upload file check-in → <b>Tính Check-in</b> → <b>☁ Lưu Cloud</b> để lưu. Hoặc nhấn <b>↓ Tải lại</b> để xem dữ liệu đã lưu.</div>
   </div>
 </section>
 
@@ -323,12 +324,13 @@
     <input type="file" id="input-khmoi-dh6" accept=".xlsx,.xls" style="display:none">
     <span id="label-khmoi-dh6" style="font-size:12px;color:#555;margin-right:10px"></span>
     <button id="btn-khmoi-calc" onclick="onKhMoiCalculate()" disabled>📊 Tính KH Mới</button>
-    <button id="btn-khmoi-load-cloud" class="btn-cloud-sm" onclick="onLoadKhMoiCloud()">☁ Tải Cloud</button>
+    <button id="btn-khmoi-save-cloud" class="btn-cloud-sm btn-cloud-save" onclick="onSaveKhMoiCloud()" disabled>☁ Lưu Cloud</button>
+    <button id="btn-khmoi-load-cloud" class="btn-cloud-sm" onclick="onLoadKhMoiCloud()">↓ Tải lại</button>
     <span id="khmoi-status" style="font-size:12px;color:#888;margin-left:6px"></span>
     <span id="khmoi-cloud-status" style="font-size:11px;color:#4A7FB5;margin-left:8px"></span>
   </div>
   <div id="khmoi-output">
-    <div style="padding:32px;text-align:center;color:#aaa;font-size:13px">Upload DSKH + ĐƠN HÀNG 6 THÁNG rồi nhấn <b>Tính KH Mới</b>, hoặc <b>☁ Tải Cloud</b>.</div>
+    <div style="padding:32px;text-align:center;color:#aaa;font-size:13px">Upload DSKH + ĐƠN HÀNG 6 THÁNG → <b>Tính KH Mới</b> → <b>☁ Lưu Cloud</b>. Hoặc <b>↓ Tải lại</b> để xem dữ liệu đã lưu.</div>
   </div>
 </section>
 

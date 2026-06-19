@@ -1422,6 +1422,10 @@ th[title]:not([title=""]) { cursor: help; }
   padding: 5px 10px; font-size: 12px; cursor: pointer; white-space: nowrap;
 }
 .btn-cloud-sm:hover { background: #3366A0; }
+.btn-cloud-sm:disabled { background: #aaa; cursor: not-allowed; }
+.btn-cloud-save { background: #16A34A; }
+.btn-cloud-save:hover { background: #15803D; }
+.btn-cloud-save:disabled { background: #aaa; cursor: not-allowed; }
 
 /* ============================================================
    BÁO CÁO QUÝ
@@ -1463,8 +1467,14 @@ th[title]:not([title=""]) { cursor: help; }
 .quy-ds-total-row { font-size: 12px; color: #7A8DA8; margin-top: 8px; text-align: center; }
 .quy-ds-total-row b { color: #003D77; }
 
-/* Chart 03 big pct */
-.quy-big-pct     { font-size: 52px; font-weight: 800; color: #003D77; text-align: center; line-height: 1; margin: 20px 0 8px; }
+/* Miền filter bar */
+.quy-mien-bar    { display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: #EEF3FA; border: 1px solid #DDE3EC; border-radius: 8px; margin-bottom: 12px; }
+.quy-mien-label  { font-size: 12px; font-weight: 700; color: #4A6080; white-space: nowrap; }
+.quy-mien-select { font-size: 12px; padding: 4px 8px; border: 1px solid #BCC7D8; border-radius: 4px; background: #fff; color: #2C3E56; cursor: pointer; }
+
+/* Chart 03 big pct — flex column to fill height of sibling card */
+.quy-pct-card    { display: flex; flex-direction: column; justify-content: center; }
+.quy-big-pct     { font-size: 52px; font-weight: 800; color: #003D77; text-align: center; line-height: 1; margin: 16px 0 8px; }
 .quy-big-pct-sub { font-size: 12px; color: #6B7B92; text-align: center; line-height: 1.5; }
 
 /* Chart 04 DPKH */

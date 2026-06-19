@@ -87,6 +87,7 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets) {
     tdvRows.push({
       maTDV: tdv,
       tenTDV:       info.tenTDV      || tdv,
+      mien:         info.mien        || '',
       dpkhTarget:   info.dpkhTarget  || 0,
       dpmhTarget:   info.dpmhTarget  || 0,
       dsTongTarget: info.dsTongTarget|| 0,
@@ -179,17 +180,29 @@ function renderQuarterlyReport(data) {
   const vndC1 = v => v>=1e6 ? (v/1e6).toFixed(0)+'M' : v>=1e3 ? Math.round(v/1e3)+'K' : String(Math.round(v));
   const pctFmt= v => (v*100).toFixed(0) + '%';
 
+  // ── Miền filter ───────────────────────────────────────────
+  const allTdvRowsForMien = data._allTdvRows || tdvRows; // use original full list for dropdown
+  const mienList = [...new Set(allTdvRowsForMien.map(t => t.mien).filter(Boolean))].sort();
+  const mienFilterHtml = mienList.length > 1 ? `
+    <div class="quy-mien-bar">
+      <label class="quy-mien-label">Miền:</label>
+      <select id="quy-mien-select" onchange="onQuyMienChange(this.value)" class="quy-mien-select">
+        <option value="">Tất cả</option>
+        ${mienList.map(m => `<option value="${m}">${m}</option>`).join('')}
+      </select>
+    </div>` : '';
+
   // ── Section I: Doanh số ──────────────────────────────────
   const s1 = `
 <div class="quy-section">
   <div class="quy-sec-hdr"><span class="quy-sec-num">I</span> DOANH SỐ</div>
   <div class="quy-chart-grid quy-chart-grid-3">
-    <div class="quy-chart-card quy-span-2">
+    <div class="quy-chart-card">
       <div class="quy-chart-title">01 · DOANH SỐ THEO THÁNG<span class="quy-chart-unit">(Đơn vị: triệu đồng)</span></div>
-      <div style="height:200px;position:relative"><canvas id="quy-chart-01"></canvas></div>
+      <div style="height:180px;position:relative"><canvas id="quy-chart-01"></canvas></div>
       <div class="quy-ds-total-row">Tổng doanh số quý: <b>${vndM(totalDS)}</b></div>
     </div>
-    <div class="quy-chart-card">
+    <div class="quy-chart-card quy-pct-card">
       <div class="quy-chart-title">03 · % ĐẠT TARGET QUÝ</div>
       <div class="quy-big-pct">${tdvCount>0 ? Math.round(datCount/tdvCount*100) : 0}%</div>
       <div class="quy-big-pct-sub">${datCount}/${tdvCount} TDV hoàn thành<br>chỉ tiêu quý doanh số</div>
@@ -197,7 +210,7 @@ function renderQuarterlyReport(data) {
   </div>
   <div class="quy-chart-card" style="margin-top:12px">
     <div class="quy-chart-title">02 · DOANH SỐ THEO TRÌNH DƯỢC VIÊN<span class="quy-chart-unit">(Đơn vị: triệu đồng)</span></div>
-    <div style="position:relative;height:${Math.max(180, tdvRows.length*34)}px"><canvas id="quy-chart-02"></canvas></div>
+    <div style="position:relative;height:${Math.max(160, tdvRows.length*30)}px"><canvas id="quy-chart-02"></canvas></div>
   </div>
 </div>`;
 
@@ -340,6 +353,7 @@ function renderQuarterlyReport(data) {
 
   return `
 <div id="quy-report-wrap">
+  ${mienFilterHtml}
   <div class="quy-header">
     <div class="quy-header-left">
       <div class="quy-logo-circle">M</div>
@@ -461,4 +475,47 @@ function initQuyCharts() {
       },
     });
   }
+}
+
+// ─── Miền filter ─────────────────────────────────────────────
+function onQuyMienChange(selectedMien) {
+  if (!_quyReport) return;
+
+  // Filter tdvRows by Miền
+  const baseTdvRows = _quyReport._allTdvRows || _quyReport.tdvRows;
+  if (!_quyReport._allTdvRows) _quyReport._allTdvRows = _quyReport.tdvRows; // cache original
+
+  const filtered = selectedMien
+    ? baseTdvRows.filter(t => t.mien === selectedMien)
+    : baseTdvRows;
+
+  // Recalculate aggregates
+  const { qMonthKeys, qMonthLabels } = _quyReport;
+  const dsByMonth   = qMonthKeys.map((mk,i) => ({ label: qMonthLabels[i], ds:   filtered.reduce((s,t) => s+(t.mStats[mk]?.ds  ||0), 0) }));
+  const dpkhByMonth = qMonthKeys.map((mk,i) => ({ label: qMonthLabels[i], dpkh: filtered.reduce((s,t) => s+(t.mStats[mk]?.dpkh||0), 0) }));
+  const totalDS   = filtered.reduce((s,t) => s+t.totalDS, 0);
+  const totalDPKH = dpkhByMonth.reduce((s,v) => s+v.dpkh, 0);
+  const datCount  = filtered.filter(t => t.datTarget).length;
+  const tdvCount  = filtered.length;
+
+  // Rebuild modified report data and re-render
+  const newData = Object.assign({}, _quyReport, { tdvRows: filtered, dsByMonth, dpkhByMonth, totalDS, totalDPKH, datCount, tdvCount });
+  const out = document.getElementById('quy-output');
+  if (!out) return;
+
+  // Destroy existing Chart.js instances before re-render
+  if (typeof Chart !== 'undefined') {
+    ['quy-chart-01','quy-chart-02','quy-chart-04'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) { const ch = Chart.getChart(el); if (ch) ch.destroy(); }
+    });
+  }
+
+  out.innerHTML = renderQuarterlyReport(newData);
+
+  // Restore Miền select value after re-render
+  const sel = document.getElementById('quy-mien-select');
+  if (sel) sel.value = selectedMien;
+
+  setTimeout(() => initQuyCharts(), 80);
 }
