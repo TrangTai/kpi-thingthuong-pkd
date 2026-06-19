@@ -182,16 +182,69 @@ async function fbLoadCheckIn() {
   } catch { return null; }
 }
 
+// ── KH Mới: chunked save/load (Firestore doc limit ~1MB) ───────
+const _KM_CHUNK = 2500; // items per chunk for dskhList
+
 async function fbSaveKhMoiData(dskhList, donHang6Summary) {
+  // ── 1. Save dskhList in chunks ──────────────────────────────
+  const dskhChunks = [];
+  for (let i = 0; i < dskhList.length; i += _KM_CHUNK)
+    dskhChunks.push(dskhList.slice(i, i + _KM_CHUNK));
+
+  // Delete old chunk docs that may no longer be needed
+  const oldMeta = await db.collection('meta').doc('khMoiDskh').get();
+  if (oldMeta.exists && oldMeta.data().chunkCount) {
+    const oldCount = oldMeta.data().chunkCount;
+    if (oldCount > dskhChunks.length) {
+      const delBatch = db.batch();
+      for (let i = dskhChunks.length; i < oldCount; i++)
+        delBatch.delete(db.collection('meta').doc(`khMoiDskh_c${i}`));
+      await delBatch.commit();
+    }
+  }
+
+  // Save new chunks in parallel (each is well under 1MB)
+  await Promise.all(dskhChunks.map((chunk, i) =>
+    db.collection('meta').doc(`khMoiDskh_c${i}`).set({ data: JSON.stringify(chunk) })
+  ));
+  // Save metadata last (signals write is complete)
   await db.collection('meta').doc('khMoiDskh').set({
-    data: JSON.stringify(dskhList),
+    chunkCount: dskhChunks.length,
+    total: dskhList.length,
     savedAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
+
+  // ── 2. Save donHang6Summary (khMap is usually <1MB, chunk if needed) ──
   if (donHang6Summary) {
-    await db.collection('meta').doc('khMoi6Thang').set({
-      data: JSON.stringify(donHang6Summary),
-      savedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
+    const khEntries = Object.entries(donHang6Summary.khMap || {});
+    const KH_CHUNK = 20000;
+    const khChunks = [];
+    for (let i = 0; i < khEntries.length; i += KH_CHUNK)
+      khChunks.push(Object.fromEntries(khEntries.slice(i, i + KH_CHUNK)));
+
+    if (khChunks.length <= 1) {
+      // Small enough for single doc (old format, backwards-compat)
+      await db.collection('meta').doc('khMoi6Thang').set({
+        data: JSON.stringify(donHang6Summary),
+        savedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    } else {
+      const old6 = await db.collection('meta').doc('khMoi6Thang').get();
+      if (old6.exists && old6.data().khChunkCount > khChunks.length) {
+        const delBatch = db.batch();
+        for (let i = khChunks.length; i < old6.data().khChunkCount; i++)
+          delBatch.delete(db.collection('meta').doc(`khMoi6Thang_c${i}`));
+        await delBatch.commit();
+      }
+      await Promise.all(khChunks.map((chunk, i) =>
+        db.collection('meta').doc(`khMoi6Thang_c${i}`).set({ data: JSON.stringify(chunk) })
+      ));
+      await db.collection('meta').doc('khMoi6Thang').set({
+        khChunkCount: khChunks.length,
+        months: JSON.stringify(donHang6Summary.months || []),
+        savedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    }
   }
 }
 
@@ -200,10 +253,45 @@ async function fbLoadKhMoiData() {
     db.collection('meta').doc('khMoiDskh').get(),
     db.collection('meta').doc('khMoi6Thang').get(),
   ]);
-  return {
-    dskhList:       dskhSnap.exists  ? JSON.parse(dskhSnap.data().data  || '[]') : null,
-    donHang6Summary: dh6Snap.exists  ? JSON.parse(dh6Snap.data().data   || '{}') : null,
-  };
+
+  // ── Load dskhList ───────────────────────────────────────────
+  let dskhList = null;
+  if (dskhSnap.exists) {
+    const m = dskhSnap.data();
+    if (m.chunkCount) {
+      // New chunked format
+      const snaps = await Promise.all(
+        Array.from({ length: m.chunkCount }, (_, i) =>
+          db.collection('meta').doc(`khMoiDskh_c${i}`).get()
+        )
+      );
+      dskhList = snaps.flatMap(s => s.exists ? JSON.parse(s.data().data || '[]') : []);
+    } else {
+      // Old single-doc format
+      dskhList = JSON.parse(m.data || '[]');
+    }
+  }
+
+  // ── Load donHang6Summary ────────────────────────────────────
+  let donHang6Summary = null;
+  if (dh6Snap.exists) {
+    const m = dh6Snap.data();
+    if (m.khChunkCount) {
+      // Chunked khMap format
+      const snaps = await Promise.all(
+        Array.from({ length: m.khChunkCount }, (_, i) =>
+          db.collection('meta').doc(`khMoi6Thang_c${i}`).get()
+        )
+      );
+      const khMap = Object.assign({}, ...snaps.map(s => s.exists ? JSON.parse(s.data().data || '{}') : {}));
+      donHang6Summary = { khMap, months: JSON.parse(m.months || '[]') };
+    } else {
+      // Old single-doc format
+      donHang6Summary = JSON.parse(m.data || '{}');
+    }
+  }
+
+  return { dskhList, donHang6Summary };
 }
 
 async function fbCreateQLBHAccounts(targets) {
