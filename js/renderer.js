@@ -74,6 +74,7 @@ function renderTable(results, quyMap) {
     { text: 'TỶ LỆ HOÀN THÀNH',  span: 7, cls: 'h-ratio'  },
     { text: 'TỔNG HỢP KPI',       span: 4, cls: 'h-kpi'   },
     { text: cdLabel,               span: 3, cls: 'h-spcd'      },
+    { text: 'KH MỚI',             span: 1, cls: 'h-khmoi'     },
     { text: 'DS CÒN LẠI THÁNG',  span: 4, cls: 'h-con-thang' },
     ...(quyMap ? [
       { text: `TARGET ${qc.quyLabel}`,     span: 4, cls: 'h-quy-target' },
@@ -117,6 +118,8 @@ function renderTable(results, quyMap) {
     { text: 'SL SP CĐ',        cls: 'h-spcd',   nf: 'slspcd',  ph: '>=5',   key: r => r.soLuongSpCd || 0, fmt: 'num', compact: true, tip: `Tổng số hộp ${cdMaSPStr || 'SP chỉ định'} đã bán` },
     { text: 'KH phủ SP CĐ',    cls: 'h-spcd',   nf: 'khspcd',  ph: '>=5',   key: r => r.dpkhSpCd || 0, fmt: 'num', compact: true, tip: `Số KH mua ít nhất 1 trong các mã ${cdMaSPStr || 'SP chỉ định'}` },
     { text: 'Đạt SP CĐ',       cls: 'h-spcd',      nf: 'datspcd', ph: '>=1',   key: r => r.datSpCd === true ? 1 : 0, fmt: '_spcd', compact: true, tip: `Đạt khi ≥${CONFIG.SP_CHI_DINH.soLuongTarget} hộp VÀ ≥${CONFIG.SP_CHI_DINH.dpkhSpCdTarget} KH phủ` },
+    // KH MỚI (1)
+    { text: 'KH Mới', cls: 'h-khmoi', nf: 'khmoi', ph: '>=1', key: r => (typeof getKhMoiCount === 'function' ? getKhMoiCount(r.maTDV) : null), fmt: '_khmoi', compact: true, tip: 'Số KH mới tháng này (từ tab KH Mới)' },
     // DS CÒN LẠI THÁNG (4)
     { text: 'Mức 100%', cls: 'h-con-thang', nf: 'con100', ph: '>=M', key: r => Math.max(0, r.dsTongTarget * 1.00 - r.dsTongCT), fmt: 'vndC', compact: true, tip: 'Còn thiếu để đạt 100% DS tháng (T+CT)' },
     { text: 'Mức 115%', cls: 'h-con-thang', nf: 'con115', ph: '>=M', key: r => Math.max(0, r.dsTongTarget * 1.15 - r.dsTongCT), fmt: 'vndC', compact: true, tip: 'Còn thiếu để đạt 115% DS tháng (T+CT)' },
@@ -164,6 +167,7 @@ function renderTable(results, quyMap) {
   <label class="ctg-item"><input type="checkbox" data-col-group="ratio" checked onchange="applyColToggle()"> TỶ LỆ %</label>
   <label class="ctg-item"><input type="checkbox" data-col-group="kpi" checked onchange="applyColToggle()"> TỔNG HỢP KPI</label>
   <label class="ctg-item"><input type="checkbox" data-col-group="spcd" checked onchange="applyColToggle()"> SP CHỈ ĐỊNH</label>
+  <label class="ctg-item"><input type="checkbox" data-col-group="khmoi" checked onchange="applyColToggle()"> KH MỚI</label>
   <label class="ctg-item"><input type="checkbox" data-col-group="con-thang" checked onchange="applyColToggle()"> DS CÒN LẠI</label>
   ${quyMap ? `<label class="ctg-item"><input type="checkbox" data-col-group="quy" checked onchange="applyColToggle()"> ${qc.quyLabel}</label>` : ''}
   ${quyMap ? `<label class="ctg-item"><input type="checkbox" data-col-group="quy-target" checked onchange="applyColToggle()"> Target ${qc.quyLabel}</label>` : ''}
@@ -264,10 +268,13 @@ function renderTable(results, quyMap) {
         else cell = r.datSpCd
           ? '<span style="color:#00A651;font-weight:700">1</span>'
           : '<span style="color:#D93B3B">0</span>';
+      } else if (c.fmt === '_khmoi') {
+        cell = (val === null || val === undefined) ? '<span style="color:#ccc">—</span>' : String(val);
       } else cell = val;
 
       const cc = (c.fmt === 'pct' || c.fmt === 'hs') ? colorClass(val) : '';
-      html += `<td class="num ${c.cls} ${cc}"${tdTitle}>${cell}</td>`;
+      const xc = c.fmt === '_khmoi' ? ' khmoi-cell' : '';
+      html += `<td class="num ${c.cls} ${cc}${xc}"${tdTitle}>${cell}</td>`;
     }
 
     html += '</tr>';
@@ -705,7 +712,7 @@ function toggleColPanel() {
 function applyColToggle() {
   const table = document.querySelector('.kpi-table');
   if (!table) return;
-  ['plan','actual','ratio','kpi','spcd','con-thang','quy','quy-target','kv','mien','qlbh','matdv','type','qlbh-rows']
+  ['plan','actual','ratio','kpi','spcd','khmoi','con-thang','quy','quy-target','kv','mien','qlbh','matdv','type','qlbh-rows']
     .forEach(g => table.classList.remove('hide-' + g));
   document.querySelectorAll('[data-col-group]').forEach(cb => {
     if (!cb.checked) table.classList.add('hide-' + cb.dataset.colGroup);

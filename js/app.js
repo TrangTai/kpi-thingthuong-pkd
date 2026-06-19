@@ -354,6 +354,14 @@ async function onKhMoiCalculate() {
     const result = calculateKhMoi(_khMoiDskhList, _khMoi6ThangData, currentOrders);
     out.innerHTML = renderKhMoiTab(result);
 
+    // Refresh KH Mới column in Tính Thưởng table if it's already rendered
+    document.querySelectorAll('#kpi-tbody tr[data-matdv]').forEach(tr => {
+      const cell = tr.querySelector('.khmoi-cell');
+      if (!cell) return;
+      const n = getKhMoiCount(tr.dataset.matdv);
+      cell.innerHTML = n !== null ? String(n) : '<span style="color:#ccc">—</span>';
+    });
+
     // Save to cloud (non-blocking)
     const dh6Summary = { khMap: _khMoi6ThangData.khMap, months: _khMoi6ThangData.months };
     fbSaveKhMoiData(_khMoiDskhList, dh6Summary)
@@ -387,6 +395,14 @@ async function onLoadKhMoiCloud() {
     if (staticData.dhLonOrders?.length) currentOrders = currentOrders.concat(staticData.dhLonOrders);
     const result = calculateKhMoi(_khMoiDskhList, _khMoi6ThangData, currentOrders);
     out.innerHTML = renderKhMoiTab(result);
+
+    // Refresh KH Mới column in Tính Thưởng table if it's already rendered
+    document.querySelectorAll('#kpi-tbody tr[data-matdv]').forEach(tr => {
+      const cell = tr.querySelector('.khmoi-cell');
+      if (!cell) return;
+      const n = getKhMoiCount(tr.dataset.matdv);
+      cell.innerHTML = n !== null ? String(n) : '<span style="color:#ccc">—</span>';
+    });
 
     const s = document.getElementById('khmoi-cloud-status');
     if (s) s.textContent = `☁ Tải từ Cloud · ${_khMoiDskhList.length} KH`;

@@ -4,6 +4,13 @@
 
 let _khMoiReport = null; // last calculated report
 
+// Public accessor used by renderer.js to populate KH Mới column
+function getKhMoiCount(maTDV) {
+  if (!_khMoiReport?.tdvRows) return null;
+  const t = _khMoiReport.tdvRows.find(t => t.maTDV === (maTDV || '').trim().toUpperCase());
+  return t ? t.khList.length : 0;
+}
+
 // ─── Parser helper: remove Vietnamese diacritics for flexible matching ───────
 function _normVI(s) {
   return String(s || '').toLowerCase()
@@ -213,7 +220,7 @@ function renderKhMoiTab(data) {
   </div>
 </div>
 <div class="km-filters">
-  <select id="km-filter-mien" class="ci-select" onchange="applyKhMoiFilter()">${mienOpts}</select>
+  <select id="km-filter-mien" class="ci-select" onchange="onKhMoiMienChange()">${mienOpts}</select>
   <select id="km-filter-tdv"  class="ci-select" onchange="applyKhMoiFilter()">${tdvOpts}</select>
   <button class="ci-screenshot-btn" onclick="captureKhMoiReport()">📷 Chụp ảnh</button>
 </div>
@@ -249,9 +256,9 @@ function _buildTdvRow(t, historyLabel, currentMonthLabel) {
     <span class="km-tdv-name">${t.tenTDV}</span>
     <span class="km-tdv-area">${t.khuVuc || ''}</span>
     <span class="km-tdv-mien">${t.mien || ''}</span>
-    <span class="km-badge km-badge-total">${t.khList.length} KH</span>
-    <span class="km-badge km-badge-ok">${daMua} đã mua</span>
-    ${chuaMua > 0 ? `<span class="km-badge km-badge-miss">${chuaMua} chưa</span>` : ''}
+    <span class="km-badge km-badge-total">Tổng ${t.khList.length} KH</span>
+    <span class="km-badge km-badge-ok">${daMua} đã mua ${currentMonthLabel}</span>
+    <span class="km-badge km-badge-gray">${chuaMua} KH chưa mua</span>
   </div>
   <div class="km-tdv-body" id="${id}" style="display:none">
     <table class="km-table">
@@ -274,6 +281,21 @@ function toggleKhMoiTDV(id) {
   const open = body.style.display !== 'none';
   body.style.display = open ? 'none' : '';
   if (icon) icon.textContent = open ? '▶' : '▼';
+}
+
+function onKhMoiMienChange() {
+  if (!_khMoiReport) return;
+  const mien = document.getElementById('km-filter-mien')?.value || '';
+  const tdvSel = document.getElementById('km-filter-tdv');
+  if (tdvSel) {
+    const visible = mien
+      ? _khMoiReport.tdvRows.filter(t => t.mien === mien)
+      : _khMoiReport.tdvRows;
+    tdvSel.innerHTML = ['<option value="">Tất cả TDV</option>',
+      ...visible.map(t => `<option value="${t.maTDV}">${t.tenTDV}</option>`)
+    ].join('');
+  }
+  applyKhMoiFilter();
 }
 
 function applyKhMoiFilter() {

@@ -159,7 +159,7 @@ function _buildCiTableBody(rows, allDays) {
   return rows.filter(r => !r.isGroup).map(row => {
     stt++;
     const trCls = '';
-    const totalFmt = row.totalDS ? Math.round(row.totalDS / 1e6) + 'M' : '—';
+    const totalFmt = row.totalCI ? String(row.totalCI) : '—';
 
     const dayCells = allDays.map(day => {
       const d = row.daily[day] || { ciKH: 0, ds: 0 };
@@ -236,7 +236,7 @@ function renderCheckInTable(data) {
               <th rowspan="2" class="ci-hdr">Tên TDV</th>
               <th rowspan="2" class="ci-hdr">Khu vực</th>
               <th rowspan="2" class="ci-hdr">Miền</th>
-              <th rowspan="2" class="ci-hdr">Tổng DS</th>
+              <th rowspan="2" class="ci-hdr">Tổng KH CI</th>
               ${dayHeaders}
             </tr>
             <tr>${daySubHdrs}</tr>

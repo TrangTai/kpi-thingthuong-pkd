@@ -446,6 +446,7 @@ th.h-actual{ background: var(--green-700); }
 th.h-ratio { background: var(--violet); }
 th.h-kpi   { background: #8B2252; }
 th.h-spcd  { background: #7D4A00; }
+th.h-khmoi { background: #00695C; }
 th.h-con-thang  { background: #5D4037; }
 th.h-quy-target { background: #1B4F72; }
 th.h-quy-actual { background: #1D6A5A; }
@@ -997,6 +998,7 @@ th[title]:not([title=""]) { cursor: help; }
 .kpi-table.hide-kpi      .h-kpi       { display: none; }
 .kpi-table.hide-spcd     .h-spcd      { display: none; }
 .kpi-table.hide-con-thang .h-con-thang { display: none; }
+.kpi-table.hide-khmoi    .h-khmoi     { display: none; }
 .kpi-table.hide-quy .h-quy-target,
 .kpi-table.hide-quy .h-quy-actual,
 .kpi-table.hide-quy .h-quy-pct,
@@ -1477,8 +1479,8 @@ th[title]:not([title=""]) { cursor: help; }
 .km-td-tinh { text-align: center; font-weight: 700; }
 .km-table td { padding: 6px 10px; border-bottom: 1px solid #EEF1F6; }
 .km-row-ok   { }
-.km-row-miss { background: #FFF4E0 !important; }
-.km-row-miss:nth-child(even) { background: #FFF0D0 !important; }
+.km-row-miss { background: #F0F2F5 !important; }
+.km-row-miss:nth-child(even) { background: #E8EAED !important; }
 .km-cur-ok   { color: #16A34A; font-weight: 600; }
 .km-tinh-ok  { color: #16A34A; font-size: 15px; }
 .col-name.kc-clickable:hover { text-decoration: underline; background: #EBF3FC; }
