@@ -4,38 +4,44 @@
 
 let _khMoiReport = null; // last calculated report
 
+// ─── Parser helper: remove Vietnamese diacritics for flexible matching ───────
+function _normVI(s) {
+  return String(s || '').toLowerCase()
+    .normalize('NFD').replace(/\p{Diacritic}/gu, '')
+    .replace(/đ/g, 'd').trim();
+}
+
 // ─── Parser: DSKH.xlsx ───────────────────────────────────────
-// Expected columns (flexible header detection): Mã KH, Tên KH, Mã TDV, Tên TDV, Khu vực, Miền, QLBH
+// Actual format: Mã KH | Tên KH | Địa chỉ | Mã TDV  (4 columns, no Miền/TDV info)
+// Miền + TDV info is looked up from staticData.targets later in calculateKhMoi
 function parseDSKHMoi(arrayBuffer) {
   const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false });
   const ws = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
   if (rows.length < 2) return [];
 
-  // Find header row (first row containing recognizable columns)
-  let headerIdx = 0;
-  let header = rows[0].map(h => String(h).toLowerCase().trim());
+  const header = rows[0].map(h => _normVI(h));
 
-  const _findCol = (keys) => {
+  const _findCol = (...keys) => {
     for (const k of keys) {
-      const i = header.findIndex(h => h.includes(k));
+      const i = header.findIndex(h => h.includes(_normVI(k)));
       if (i >= 0) return i;
     }
     return -1;
   };
 
-  const cMaKH   = _findCol(['mã kh', 'ma kh', 'makh', 'customer']);
-  const cTenKH  = _findCol(['tên kh', 'ten kh', 'tenkh', 'khách hàng', 'khach hang']);
-  const cMaTDV  = _findCol(['mã tdv', 'ma tdv', 'matdv', 'mã nv', 'ma nv']);
-  const cTenTDV = _findCol(['tên tdv', 'ten tdv', 'tentdv', 'tên nv', 'ten nv']);
-  const cKhuVuc = _findCol(['khu vực', 'khu vuc', 'khuvuc', 'kv']);
-  const cMien   = _findCol(['miền', 'mien', 'vùng', 'vung']);
-  const cQlbh   = _findCol(['qlbh', 'quản lý', 'quan ly']);
+  const cMaKH   = _findCol('ma kh', 'makh', 'customer code', 'ma kh');
+  const cTenKH  = _findCol('ten kh', 'tenkh', 'khach hang');
+  const cMaTDV  = _findCol('ma tdv', 'matdv', 'ma nv', 'manv');
+  const cTenTDV = _findCol('ten tdv', 'tentdv', 'ten nv');
+  const cKhuVuc = _findCol('khu vuc', 'khuvuc');
+  const cMien   = _findCol('mien', 'vung');
+  const cQlbh   = _findCol('qlbh', 'quan ly ban hang');
 
-  if (cMaKH < 0) throw new Error('Không tìm thấy cột "Mã KH" trong DSKH.xlsx');
+  if (cMaKH < 0) throw new Error('Không tìm thấy cột "Mã KH" trong DSKH.xlsx. Hàng đầu tiên phải là header.');
 
   const list = [];
-  for (let i = headerIdx + 1; i < rows.length; i++) {
+  for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     const maKH = String(row[cMaKH] || '').trim();
     if (!maKH) continue;
@@ -53,63 +59,50 @@ function parseDSKHMoi(arrayBuffer) {
 }
 
 // ─── Parser: DONHANG_6_THANG.xlsx ────────────────────────────
+// Actual format: Mã ĐH | Ngày ĐH | Mã KH | Tên KH | Mã SP | Tên SP | SL | Giá | Tổng Tiền | Mã TDV | Tên TDV | Năm | Tháng
 // Returns: { khMap: {maKH → ds6M}, months: ['YYYY-MM', ...] }
-// Reuses same column layout as ĐƠN HÀNG (col D=maKH, col N=doanhSo, col O=ngayTao)
 function parseDonHang6Thang(arrayBuffer) {
   const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false });
   const ws = wb.Sheets[wb.SheetNames[0]];
-  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  if (rows.length < 2) return { khMap: {}, months: [] };
 
-  // Try to detect columns from header row
-  const headerRow = 1; // row index 1 = row 2 (0-based)
-  const getCell = (r, c) => {
-    const a = XLSX.utils.encode_cell({ r, c });
-    return ws[a] ? String(ws[a].v || '').toLowerCase().trim() : '';
+  // Detect columns from header row (row 0)
+  const header = rows[0].map(h => _normVI(h));
+  const _fc = (...keys) => {
+    for (const k of keys) {
+      const i = header.findIndex(h => h.includes(_normVI(k)));
+      if (i >= 0) return i;
+    }
+    return -1;
   };
 
-  // Find columns by scanning header
-  let cMaKH = 3, cDS = 13, cNgay = 14; // defaults: D, N, O (0-indexed)
-  for (let c = 0; c <= Math.min(range.e.c, 30); c++) {
-    const h = getCell(1, c);
-    if (h.includes('mã kh') || h.includes('ma kh') || h === 'makh') cMaKH = c;
-    if ((h.includes('doanh số') || h.includes('doanh so') || h.includes('tổng tiền') || h.includes('tong tien')) && cDS === 13) cDS = c;
-    if (h.includes('ngày') && (h.includes('tạo') || h.includes('đơn') || h.includes('giao'))) cNgay = c;
-  }
+  const cMaKH  = _fc('ma kh', 'makh');
+  const cDS     = _fc('tong tien', 'doanh so', 'thanh tien', 'so tien');
+  const cNam    = _fc('nam');
+  const cThang  = _fc('thang');
 
-  const khMap = {};
+  if (cMaKH < 0) throw new Error('Không tìm thấy cột "Mã KH" trong DONHANG_6_THANG.xlsx');
+  if (cDS    < 0) throw new Error('Không tìm thấy cột "Tổng Tiền" trong DONHANG_6_THANG.xlsx');
+
+  const khMap   = {};
   const monthSet = new Set();
 
-  for (let r = 2; r <= range.e.r; r++) {
-    const maKHCell = ws[XLSX.utils.encode_cell({ r, c: cMaKH })];
-    const dsCell   = ws[XLSX.utils.encode_cell({ r, c: cDS   })];
-    const ngayCell = ws[XLSX.utils.encode_cell({ r, c: cNgay })];
-    if (!maKHCell || !dsCell) continue;
-
-    const maKH = String(maKHCell.v || '').trim();
+  for (let i = 1; i < rows.length; i++) {
+    const row  = rows[i];
+    const maKH = String(row[cMaKH] || '').trim();
     if (!maKH) continue;
-    const ds = parseFloat(dsCell.v) || 0;
+    const ds = parseFloat(row[cDS]) || 0;
 
-    // Extract month from date
-    let dt = null;
-    if (ngayCell) {
-      if (ngayCell.t === 'n' && ngayCell.v > 1000) {
-        dt = new Date(Math.round((ngayCell.v - 25569) * 86400 * 1000));
-      } else if (ngayCell.t === 'd') {
-        dt = ngayCell.v;
-      } else if (ngayCell.t === 's') {
-        const p = String(ngayCell.v).split(/[\/\-\.]/);
-        if (p.length >= 3) {
-          const y = parseInt(p[2]) > 100 ? parseInt(p[2]) : parseInt(p[0]);
-          const m = parseInt(p[1]) - 1;
-          const d = parseInt(p[2]) > 100 ? parseInt(p[1]) : parseInt(p[2]);
-          dt = new Date(y, m, d);
-        }
+    // Extract month key
+    let monthKey = null;
+    if (cNam >= 0 && cThang >= 0 && row[cNam] && row[cThang]) {
+      const y = parseInt(row[cNam]);
+      const m = parseInt(row[cThang]);
+      if (y > 2000 && m >= 1 && m <= 12) {
+        monthKey = `${y}-${String(m).padStart(2, '0')}`;
       }
     }
-
-    const monthKey = dt
-      ? `${dt.getUTCFullYear?.() || dt.getFullYear()}-${String((dt.getUTCMonth?.() ?? dt.getMonth()) + 1).padStart(2,'0')}`
-      : null;
     if (monthKey) monthSet.add(monthKey);
 
     if (!khMap[maKH]) khMap[maKH] = 0;
@@ -135,35 +128,44 @@ function calculateKhMoi(dskhList, donHang6Data, currentOrders) {
     currentDsMap[k] += o.doanhSo || 0;
   });
 
+  // Look up TDV info from staticData.targets (mien, khuVuc, tenTDV, qlbhCode)
+  const targetMap = {};
+  if (typeof staticData !== 'undefined' && staticData.targets) {
+    staticData.targets.forEach(t => {
+      targetMap[(t.maTDV || '').toUpperCase()] = t;
+    });
+  }
+
   // Determine month labels for display
   const now = new Date();
   const currentMonthLabel = `T${now.getMonth() + 1}/${now.getFullYear()}`;
   const historyLabel = months6.length >= 2
     ? `T${parseInt(months6[0].split('-')[1])}/${months6[0].split('-')[0]} - T${parseInt(months6[months6.length-1].split('-')[1])}/${months6[months6.length-1].split('-')[0]}`
-    : 'DS 6 tháng';
+    : (months6.length === 1 ? `T${parseInt(months6[0].split('-')[1])}/${months6[0].split('-')[0]}` : 'DS 6 tháng');
 
   // Group KH by TDV
   const tdvMap = {};
   dskhList.forEach(kh => {
-    const key = kh.maTDV || '__none';
-    if (!tdvMap[key]) {
-      tdvMap[key] = {
-        maTDV:  kh.maTDV,
-        tenTDV: kh.tenTDV || kh.maTDV,
-        khuVuc: kh.khuVuc,
-        mien:   kh.mien,
-        qlbhCode: kh.qlbhCode,
-        khList: [],
+    const tdvKey = (kh.maTDV || '').toUpperCase() || '__none';
+    const tInfo  = targetMap[tdvKey] || {};
+    if (!tdvMap[tdvKey]) {
+      tdvMap[tdvKey] = {
+        maTDV:    tdvKey,
+        tenTDV:   kh.tenTDV || tInfo.tenTDV || tdvKey,
+        khuVuc:   kh.khuVuc || tInfo.khuVuc || '',
+        mien:     kh.mien   || tInfo.mien   || '',
+        qlbhCode: kh.qlbhCode || tInfo.qlbhCode || tInfo.qlbh || '',
+        khList:   [],
       };
     }
-    const ds6M      = khMap6M[kh.maKH] || 0;
+    const ds6M       = khMap6M[kh.maKH] || 0;
     const dsCurrentM = currentDsMap[kh.maKH] || 0;
 
     // KH mới candidate: no DS in previous 6 months
     if (ds6M === 0) {
-      tdvMap[key].khList.push({
-        maKH:     kh.maKH,
-        tenKH:    kh.tenKH,
+      tdvMap[tdvKey].khList.push({
+        maKH:        kh.maKH,
+        tenKH:       kh.tenKH,
         ds6M,
         dsCurrentM,
         isTinhKhMoi: dsCurrentM >= KH_MOI_MIN_DS,
