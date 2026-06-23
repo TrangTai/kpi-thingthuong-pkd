@@ -308,13 +308,16 @@ async function captureCheckInReport() {
 
     document.body.appendChild(clone);
 
-    // Two rAF passes ensure layout is complete before measuring
-    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    // Wait for full layout reflow
+    await new Promise(r => setTimeout(r, 300));
 
     const table = clone.querySelector('.ci-table');
     const hdr   = clone.querySelector('.ci-print-hdr');
     const fullW = table ? table.offsetWidth  : clone.scrollWidth;
     const fullH = (hdr ? hdr.offsetHeight : 0) + (table ? table.offsetHeight : 0) + 4;
+
+    // DEBUG: show dimensions — remove after fix confirmed
+    alert(`[DEBUG] tableH=${table?.offsetHeight}  hdrH=${hdr?.offsetHeight}\nfullW=${fullW}  fullH=${fullH}\n\nNếu fullH < 500 thì đo sai.\nNếu fullH > 1000 thì html2canvas bị clip.`);
 
     const canvas = await html2canvas(clone, {
       backgroundColor: '#fff',
