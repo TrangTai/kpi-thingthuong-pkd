@@ -79,6 +79,7 @@ function initAdminApp() {
   document.getElementById('btn-save-cloud').style.display    = 'inline-block';
   document.getElementById('btn-create-accounts').style.display = 'inline-block';
   document.getElementById('btn-create-tpkd').style.display   = 'inline-block';
+  document.getElementById('btn-create-qtsl').style.display   = 'inline-block';
 
   setupFileInput('input-don-hang', 'badge-don-hang', 'label-don-hang', f => { uploadedFiles.donHang = f; });
   setupFileInput('input-dh-lon',   'badge-dh-lon',   'label-dh-lon',   f => { uploadedFiles.dhLon   = f; onStaticUpload('dhLon',   f, parseDhLon,        SK.dhLon,   'dhLonOrders');   }, false);
@@ -282,6 +283,27 @@ async function onCreateTPKDAccount() {
     console.error(err);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '🔑 Tạo TK TPKD'; }
+  }
+}
+
+async function onCreateQTSLAccount() {
+  const btn = document.getElementById('btn-create-qtsl');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang tạo...'; }
+  try {
+    // Auth account already exists (created externally); just ensure Firestore doc is set
+    const uid = 'UQDGEqM01cajR3ARTD6Mj0l2Gny2';
+    await db.collection('users').doc(uid).set({
+      role: 'admin', isTpkd: true,
+      maTDV: 'QTSL', tenTDV: 'QTSL', email: 'QTSL@kpi.local',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    alert('✓ Đã tạo tài khoản QTSL!\n\nTên đăng nhập: QTSL\nMật khẩu: 123456');
+    if (btn) btn.style.display = 'none'; // hide after success
+  } catch(err) {
+    alert('Lỗi: ' + err.message);
+    console.error(err);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔑 Tạo TK QTSL'; }
   }
 }
 
