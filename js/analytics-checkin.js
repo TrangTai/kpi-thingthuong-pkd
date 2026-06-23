@@ -288,68 +288,48 @@ async function captureCheckInReport() {
     return;
   }
   const btn = document.querySelector('.ci-screenshot-btn');
-  const wrap = document.querySelector('.ci-table-wrap');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang chụp...'; }
 
-  const prevZoom = _ciZoom;
-  _ciZoom = 1;
-  if (wrap) wrap.style.zoom = '1';
-
-  // Collect ALL ancestors up to body so we can temporarily unlock their overflow
-  const ancestors = [];
-  let p = el.parentElement;
-  while (p && p !== document.body) {
-    ancestors.push({ node: p, overflow: p.style.overflow, height: p.style.height, maxHeight: p.style.maxHeight });
-    p = p.parentElement;
-  }
-
-  const prevElOverflow = el.style.overflow;
-  const prevElWidth    = el.style.width;
-  const prevElHeight   = el.style.height;
-  const prevWrapOvf    = wrap ? wrap.style.overflow : '';
-  const prevWrapW      = wrap ? wrap.style.width    : '';
-  const prevWrapH      = wrap ? wrap.style.height   : '';
-
-  // Unlock everything so browser can layout the full table before we measure
-  el.style.overflow = 'visible'; el.style.width = 'max-content'; el.style.height = 'auto';
-  if (wrap) { wrap.style.overflow = 'visible'; wrap.style.width = 'max-content'; wrap.style.height = 'auto'; }
-  ancestors.forEach(a => { a.node.style.overflow = 'visible'; a.node.style.height = 'auto'; a.node.style.maxHeight = 'none'; });
-
-  await new Promise(r => setTimeout(r, 150));
-
-  let fullW = 0, fullH = 0;
+  let clone = null;
   try {
-    const table = el.querySelector('.ci-table');
-    const hdr   = el.querySelector('.ci-print-hdr');
-    fullW = table ? table.offsetWidth  : el.scrollWidth;
-    fullH = (hdr ? hdr.offsetHeight : 0) + (table ? table.offsetHeight : 0) + 4;
+    // Deep-clone the element and attach directly to <body> with position:fixed.
+    // position:fixed bypasses ALL ancestor overflow/height constraints, so the
+    // browser lays out the full table and offsetHeight returns the true value.
+    clone = el.cloneNode(true);
+    clone.style.cssText = 'position:fixed;top:0;left:0;z-index:2147483647;overflow:visible;width:max-content;height:auto;zoom:1;background:#fff;';
 
-    const canvas = await html2canvas(el, {
+    const cWrap = clone.querySelector('.ci-table-wrap');
+    if (cWrap) {
+      cWrap.style.overflow = 'visible';
+      cWrap.style.width    = 'max-content';
+      cWrap.style.height   = 'auto';
+      cWrap.style.zoom     = '1';
+    }
+
+    document.body.appendChild(clone);
+
+    // Two rAF passes ensure layout is complete before measuring
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    const table = clone.querySelector('.ci-table');
+    const hdr   = clone.querySelector('.ci-print-hdr');
+    const fullW = table ? table.offsetWidth  : clone.scrollWidth;
+    const fullH = (hdr ? hdr.offsetHeight : 0) + (table ? table.offsetHeight : 0) + 4;
+
+    const canvas = await html2canvas(clone, {
       backgroundColor: '#fff',
       scale: 2,
       useCORS: true,
       allowTaint: true,
       x: 0, y: 0,
-      scrollX: 0, scrollY: 0,
+      scrollX: -window.scrollX,
+      scrollY: -window.scrollY,
       windowWidth:  fullW,
       windowHeight: fullH,
       width:  fullW,
       height: fullH,
-      onclone: (_doc, clonedEl) => {
-        clonedEl.style.overflow = 'visible';
-        clonedEl.style.width    = fullW + 'px';
-        clonedEl.style.height   = fullH + 'px';
-        const cw = clonedEl.querySelector('.ci-table-wrap');
-        if (cw) { cw.style.overflow = 'visible'; cw.style.width = 'max-content'; cw.style.height = 'auto'; cw.style.zoom = '1'; }
-        let cp = clonedEl.parentElement;
-        while (cp && cp !== _doc.body) {
-          cp.style.overflow = 'visible'; cp.style.height = 'auto'; cp.style.maxHeight = 'none';
-          cp = cp.parentElement;
-        }
-        if (_doc.body) { _doc.body.style.overflow = 'visible'; _doc.body.style.height = 'auto'; }
-        if (_doc.documentElement) { _doc.documentElement.style.overflow = 'visible'; _doc.documentElement.style.height = 'auto'; }
-      },
     });
+
     const link = document.createElement('a');
     const d = _ciReportData;
     link.download = `CheckIn_T${d?.month || ''}_${d?.year || ''}_${new Date().toLocaleDateString('vi-VN').replace(/\//g,'-')}.png`;
@@ -358,10 +338,7 @@ async function captureCheckInReport() {
   } catch(err) {
     alert('Lỗi chụp ảnh: ' + err.message);
   } finally {
-    el.style.overflow = prevElOverflow; el.style.width = prevElWidth; el.style.height = prevElHeight;
-    if (wrap) { wrap.style.overflow = prevWrapOvf; wrap.style.width = prevWrapW; wrap.style.height = prevWrapH; wrap.style.zoom = String(prevZoom); }
-    ancestors.forEach(a => { a.node.style.overflow = a.overflow; a.node.style.height = a.height; a.node.style.maxHeight = a.maxHeight; });
-    _ciZoom = prevZoom;
+    if (clone && clone.parentNode) clone.parentNode.removeChild(clone);
     if (btn) { btn.disabled = false; btn.textContent = '📷 Chụp ảnh'; }
   }
 }
