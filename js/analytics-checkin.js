@@ -313,11 +313,13 @@ async function captureCheckInReport() {
 
     const table = clone.querySelector('.ci-table');
     const hdr   = clone.querySelector('.ci-print-hdr');
-    const fullW = table ? table.offsetWidth  : clone.scrollWidth;
-    const fullH = (hdr ? hdr.offsetHeight : 0) + (table ? table.offsetHeight : 0) + 4;
-
-    // DEBUG: show dimensions — remove after fix confirmed
-    alert(`[DEBUG] tableH=${table?.offsetHeight}  hdrH=${hdr?.offsetHeight}\nfullW=${fullW}  fullH=${fullH}\n\nNếu fullH < 500 thì đo sai.\nNếu fullH > 1000 thì html2canvas bị clip.`);
+    const fullW = Math.max(
+      table ? table.offsetWidth  : 0,
+      clone.scrollWidth
+    );
+    const fullH = Math.ceil(hdr   ? hdr.offsetHeight   : 0)
+                + Math.ceil(table ? table.offsetHeight  : 0)
+                + 40; // extra padding to ensure last row not clipped
 
     const canvas = await html2canvas(clone, {
       backgroundColor: '#fff',
