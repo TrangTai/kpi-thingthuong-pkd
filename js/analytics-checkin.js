@@ -291,22 +291,32 @@ async function captureCheckInReport() {
   const wrap = document.querySelector('.ci-table-wrap');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang chụp...'; }
 
-  // Reset zoom so screenshot captures the full table at 100%
+  // Reset zoom and remove overflow so html2canvas captures the FULL table width
   const prevZoom = _ciZoom;
+  const prevWrapOverflow = wrap ? wrap.style.overflow : '';
+  const prevWrapWidth    = wrap ? wrap.style.width    : '';
+  const prevElWidth      = el.style.width;
+  const prevElOverflow   = el.style.overflow;
+
   _ciZoom = 1;
-  if (wrap) wrap.style.zoom = '1';
-  await new Promise(r => setTimeout(r, 60));
+  if (wrap) { wrap.style.zoom = '1'; wrap.style.overflow = 'visible'; wrap.style.width = 'max-content'; }
+  el.style.overflow = 'visible';
+  el.style.width    = 'max-content';
+
+  await new Promise(r => setTimeout(r, 80));
 
   try {
+    const fullW = el.scrollWidth;
+    const fullH = el.scrollHeight;
     const canvas = await html2canvas(el, {
       backgroundColor: '#fff',
       scale: 2,
       useCORS: true,
       allowTaint: true,
       scrollX: 0, scrollY: 0,
-      windowWidth: el.scrollWidth,
-      width: el.scrollWidth,
-      height: el.scrollHeight,
+      windowWidth: fullW,
+      width: fullW,
+      height: fullH,
     });
     const link = document.createElement('a');
     const d = _ciReportData;
@@ -316,9 +326,11 @@ async function captureCheckInReport() {
   } catch(err) {
     alert('Lỗi chụp ảnh: ' + err.message);
   } finally {
-    // Restore zoom
+    // Restore all styles
+    if (wrap) { wrap.style.overflow = prevWrapOverflow; wrap.style.width = prevWrapWidth; wrap.style.zoom = String(prevZoom); }
+    el.style.overflow = prevElOverflow;
+    el.style.width    = prevElWidth;
     _ciZoom = prevZoom;
-    if (wrap) wrap.style.zoom = String(_ciZoom);
     if (btn) { btn.disabled = false; btn.textContent = '📷 Chụp ảnh'; }
   }
 }
