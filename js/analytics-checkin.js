@@ -291,31 +291,44 @@ async function captureCheckInReport() {
   const wrap = document.querySelector('.ci-table-wrap');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang chụp...'; }
 
-  // Reset zoom and remove overflow so html2canvas captures the FULL table width
-  const prevZoom = _ciZoom;
+  // Remove overflow + zoom constraints so html2canvas captures full width & height
+  const prevZoom         = _ciZoom;
   const prevWrapOverflow = wrap ? wrap.style.overflow : '';
   const prevWrapWidth    = wrap ? wrap.style.width    : '';
-  const prevElWidth      = el.style.width;
+  const prevWrapHeight   = wrap ? wrap.style.height   : '';
   const prevElOverflow   = el.style.overflow;
+  const prevElWidth      = el.style.width;
+  const prevElHeight     = el.style.height;
 
   _ciZoom = 1;
-  if (wrap) { wrap.style.zoom = '1'; wrap.style.overflow = 'visible'; wrap.style.width = 'max-content'; }
+  if (wrap) { wrap.style.zoom = '1'; wrap.style.overflow = 'visible'; wrap.style.width = 'max-content'; wrap.style.height = 'auto'; }
   el.style.overflow = 'visible';
   el.style.width    = 'max-content';
+  el.style.height   = 'auto';
 
-  await new Promise(r => setTimeout(r, 80));
+  await new Promise(r => setTimeout(r, 100));
 
   try {
-    const fullW = el.scrollWidth;
-    const fullH = el.scrollHeight;
+    // Measure actual content size from children (more reliable than el.scrollHeight)
+    const table  = el.querySelector('.ci-table');
+    const hdr    = el.querySelector('.ci-print-hdr');
+    const fullW  = table ? table.offsetWidth  : el.scrollWidth;
+    const fullH  = (hdr ? hdr.offsetHeight : 0) + (table ? table.offsetHeight : 0) + 4;
+
+    // Explicitly size el so html2canvas doesn't clip
+    el.style.width  = fullW + 'px';
+    el.style.height = fullH + 'px';
+
     const canvas = await html2canvas(el, {
       backgroundColor: '#fff',
       scale: 2,
       useCORS: true,
       allowTaint: true,
+      x: 0, y: 0,
       scrollX: 0, scrollY: 0,
-      windowWidth: fullW,
-      width: fullW,
+      windowWidth:  fullW,
+      windowHeight: fullH,
+      width:  fullW,
       height: fullH,
     });
     const link = document.createElement('a');
@@ -326,10 +339,10 @@ async function captureCheckInReport() {
   } catch(err) {
     alert('Lỗi chụp ảnh: ' + err.message);
   } finally {
-    // Restore all styles
-    if (wrap) { wrap.style.overflow = prevWrapOverflow; wrap.style.width = prevWrapWidth; wrap.style.zoom = String(prevZoom); }
+    if (wrap) { wrap.style.overflow = prevWrapOverflow; wrap.style.width = prevWrapWidth; wrap.style.height = prevWrapHeight; wrap.style.zoom = String(prevZoom); }
     el.style.overflow = prevElOverflow;
     el.style.width    = prevElWidth;
+    el.style.height   = prevElHeight;
     _ciZoom = prevZoom;
     if (btn) { btn.disabled = false; btn.textContent = '📷 Chụp ảnh'; }
   }
