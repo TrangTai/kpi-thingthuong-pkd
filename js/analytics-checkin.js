@@ -4,7 +4,8 @@
 
 const DAY_VI = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
-let _ciReportData = null; // last calculated report data, used for filtering + screenshot
+let _ciReportData = null;
+let _ciZoom = 1.0;
 
 // ─── Parser ─────────────────────────────────────────────────
 function parseCheckInFile(arrayBuffer) {
@@ -126,6 +127,30 @@ function calculateCheckInReport(ciData, orderRecords, targets) {
   return { rows: finalRows, allDays, year, month };
 }
 
+// ─── Zoom helpers ────────────────────────────────────────────
+function setCiZoom(delta) {
+  _ciZoom = Math.round(Math.max(0.3, Math.min(2.0, _ciZoom + delta)) * 10) / 10;
+  _applyCiZoom();
+}
+
+function setCiZoomFit() {
+  _ciZoom = 1; _applyCiZoom();
+  const section = document.getElementById('checkin-section');
+  const wrap = document.querySelector('.ci-table-wrap');
+  if (!section || !wrap) return;
+  const avail = section.clientWidth - 24;
+  const natural = wrap.scrollWidth;
+  if (natural > avail) _ciZoom = Math.max(0.3, Math.round(avail / natural * 10) / 10);
+  _applyCiZoom();
+}
+
+function _applyCiZoom() {
+  const wrap = document.querySelector('.ci-table-wrap');
+  if (wrap) wrap.style.zoom = String(_ciZoom);
+  const lbl = document.getElementById('ci-zoom-label');
+  if (lbl) lbl.textContent = Math.round(_ciZoom * 100) + '%';
+}
+
 // ─── Filter helpers ──────────────────────────────────────────
 function _getCheckInFilters() {
   const mien  = document.getElementById('ci-filter-mien')?.value  || '';
@@ -225,9 +250,16 @@ function renderCheckInTable(data) {
         <select id="ci-filter-mien" class="ci-select" onchange="applyCheckInFilter()">${mienOpts}</select>
         <select id="ci-filter-qlbh" class="ci-select" onchange="applyCheckInFilter()">${qlbhOpts}</select>
       </div>
+      <div class="ci-zoom-controls">
+        <button class="ci-zoom-btn" onclick="setCiZoom(-0.1)">−</button>
+        <span id="ci-zoom-label" class="ci-zoom-label">100%</span>
+        <button class="ci-zoom-btn" onclick="setCiZoom(+0.1)">+</button>
+        <button class="ci-zoom-btn" onclick="setCiZoomFit()" title="Vừa màn hình" style="padding:2px 7px;font-size:12px">↔</button>
+      </div>
       <button class="ci-screenshot-btn" onclick="captureCheckInReport()">📷 Chụp ảnh</button>
     </div>
     <div id="ci-capture-area">
+      <div class="ci-print-hdr">BÁO CÁO CHECK-IN &nbsp;·&nbsp; Tháng ${month}/${year} &nbsp;·&nbsp; ${tdvCount} TDV &nbsp;·&nbsp; ${allDays.length} ngày</div>
       <div class="ci-table-wrap">
         <table class="ci-table">
           <thead>
@@ -248,7 +280,7 @@ function renderCheckInTable(data) {
 }
 
 // ─── Screenshot ──────────────────────────────────────────────
-function captureCheckInReport() {
+async function captureCheckInReport() {
   const el = document.getElementById('ci-capture-area');
   if (!el) return;
   if (typeof html2canvas === 'undefined') {
@@ -256,26 +288,37 @@ function captureCheckInReport() {
     return;
   }
   const btn = document.querySelector('.ci-screenshot-btn');
+  const wrap = document.querySelector('.ci-table-wrap');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang chụp...'; }
 
-  html2canvas(el, {
-    backgroundColor: '#fff',
-    scale: 2,
-    useCORS: true,
-    allowTaint: true,
-    scrollX: 0, scrollY: 0,
-    windowWidth: el.scrollWidth,
-    width: el.scrollWidth,
-    height: el.scrollHeight,
-  }).then(canvas => {
+  // Reset zoom so screenshot captures the full table at 100%
+  const prevZoom = _ciZoom;
+  _ciZoom = 1;
+  if (wrap) wrap.style.zoom = '1';
+  await new Promise(r => setTimeout(r, 60));
+
+  try {
+    const canvas = await html2canvas(el, {
+      backgroundColor: '#fff',
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      scrollX: 0, scrollY: 0,
+      windowWidth: el.scrollWidth,
+      width: el.scrollWidth,
+      height: el.scrollHeight,
+    });
     const link = document.createElement('a');
     const d = _ciReportData;
     link.download = `CheckIn_T${d?.month || ''}_${d?.year || ''}_${new Date().toLocaleDateString('vi-VN').replace(/\//g,'-')}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
-  }).catch(err => {
+  } catch(err) {
     alert('Lỗi chụp ảnh: ' + err.message);
-  }).finally(() => {
+  } finally {
+    // Restore zoom
+    _ciZoom = prevZoom;
+    if (wrap) wrap.style.zoom = String(_ciZoom);
     if (btn) { btn.disabled = false; btn.textContent = '📷 Chụp ảnh'; }
-  });
+  }
 }

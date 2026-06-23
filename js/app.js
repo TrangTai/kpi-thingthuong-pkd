@@ -497,7 +497,12 @@ async function onQuarterlyCalculate() {
       out.innerHTML = '<div style="padding:24px;color:#C0392B">Cần tính Tính Thưởng trước (cần dữ liệu ĐƠN HÀNG tháng hiện tại).</div>';
       return;
     }
-    const result = calculateQuarterlyReport(_qData, currentOrders, _qSpNhom, staticData.targets || []);
+    const dskhByTdv = {};
+    (_khMoiDskhList || []).forEach(kh => {
+      const t = (kh.maTDV || '').toUpperCase().trim();
+      if (t) dskhByTdv[t] = (dskhByTdv[t] || 0) + 1;
+    });
+    const result = calculateQuarterlyReport(_qData, currentOrders, _qSpNhom, staticData.targets || [], dskhByTdv);
     out.innerHTML = renderQuarterlyReport(result);
     setTimeout(() => initQuyCharts(), 80);
   } catch(err) {

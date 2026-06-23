@@ -1249,6 +1249,17 @@ th[title]:not([title=""]) { cursor: help; }
 }
 .ci-screenshot-btn:hover { background: #EBF3FC; }
 .ci-screenshot-btn:disabled { opacity: .5; cursor: not-allowed; }
+.ci-zoom-controls { display: flex; align-items: center; gap: 4px; }
+.ci-zoom-btn {
+  background: #E8EDF4; border: 1px solid #BCC7D8; border-radius: 4px;
+  padding: 2px 9px; cursor: pointer; font-size: 14px; font-weight: 700; line-height: 1.4;
+}
+.ci-zoom-btn:hover { background: #D0DAEC; }
+.ci-zoom-label { font-size: 12px; color: #4A6080; min-width: 38px; text-align: center; font-weight: 600; }
+.ci-print-hdr {
+  background: #1A3557; color: #fff; padding: 8px 16px;
+  font-size: 13px; font-weight: 700; letter-spacing: .3px;
+}
 /* Miền column */
 .ci-mien { min-width: 70px; color: #444; text-align: left; }
 /* Red highlight: check-in but no DS */
