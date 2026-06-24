@@ -227,8 +227,9 @@ function renderKhMoiTab(data) {
   const mienSet = new Set(tdvRows.map(t => t.mien).filter(Boolean));
   const mienOpts = ['<option value="">Tất cả Miền</option>',
     ...[...mienSet].sort().map(m => `<option value="${m}">${m}</option>`)].join('');
+  const _tdvLabel = t => t.maTDV + (t.tenTDV && t.tenTDV !== t.maTDV ? ' · ' + t.tenTDV : '');
   const tdvOpts = ['<option value="">Tất cả TDV</option>',
-    ...tdvRows.map(t => `<option value="${t.maTDV}">${t.tenTDV}</option>`)].join('');
+    ...tdvRows.map(t => `<option value="${t.maTDV}">${_tdvLabel(t)}</option>`)].join('');
 
   const totalKhMoi  = tdvRows.reduce((s, t) => s + t.khList.length, 0);
   const totalDaMua  = tdvRows.reduce((s, t) => s + t.khList.filter(k => k.isTinhKhMoi).length, 0);
@@ -320,7 +321,7 @@ function onKhMoiMienChange() {
       ? _khMoiReport.tdvRows.filter(t => t.mien === mien)
       : _khMoiReport.tdvRows;
     tdvSel.innerHTML = ['<option value="">Tất cả TDV</option>',
-      ...visible.map(t => `<option value="${t.maTDV}">${t.tenTDV}</option>`)
+      ...visible.map(t => `<option value="${t.maTDV}">${t.maTDV + (t.tenTDV && t.tenTDV !== t.maTDV ? ' · ' + t.tenTDV : '')}`)
     ].join('');
   }
   applyKhMoiFilter();

@@ -386,6 +386,11 @@ async function onKhMoiCalculate() {
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang tính...'; }
   out.innerHTML = '<div style="padding:24px;color:#888">Đang xử lý...</div>';
   try {
+    // Load targets from cloud if not already available (needed for TDV name lookup)
+    if (!staticData.targets) {
+      try { const sup = await fbLoadSupportingData(); if (sup.targets) staticData.targets = sup.targets; } catch(e) {}
+    }
+
     let currentOrders = staticData.donHangOrders || [];
     if (staticData.dhLonOrders?.length) currentOrders = currentOrders.concat(staticData.dhLonOrders);
 
@@ -444,6 +449,11 @@ async function onLoadKhMoiCloud() {
   const out  = document.getElementById('khmoi-output');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang tải...'; }
   try {
+    // Load targets from cloud if not already available (needed for TDV name lookup)
+    if (!staticData.targets) {
+      try { const sup = await fbLoadSupportingData(); if (sup.targets) staticData.targets = sup.targets; } catch(e) {}
+    }
+
     const d = await fbLoadKhMoiData();
     if (!d.dskhList || !d.donHang6Summary) {
       out.innerHTML = '<div style="padding:20px;color:#888">Chưa có dữ liệu KH Mới trên Cloud. Admin cần Tính KH Mới rồi nhấn <b>☁ Lưu Cloud</b>.</div>';
