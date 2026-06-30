@@ -12,9 +12,10 @@ function parseTargetQuyFile(arrayBuffer) {
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
   if (rows.length < 2) return [];
 
-  const normH = rows[0].map(h => String(h||'').toLowerCase().replace(/\s+/g,'').replace(/đ/g,'d'));
-  const fi = (...ks) => { for (const k of ks) { const i = normH.findIndex(h => h.includes(k)); if (i>=0) return i; } return -1; };
-  const cMA  = fi('matdv', 'matdv');               if (cMA  < 0) throw new Error('Cần cột "Mã TDV"');
+  const _n = s => String(s||'').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'').replace(/đ/g,'d').replace(/\s+/g,'');
+  const normH = rows[0].map(h => _n(h));
+  const fi = (...ks) => { for (const k of ks) { const i = normH.findIndex(h => h.includes(_n(k))); if (i>=0) return i; } return -1; };
+  const cMA  = fi('ma tdv', 'matdv');               if (cMA  < 0) throw new Error('Cần cột "Mã TDV"');
   const cTEN = fi('tentdv', 'ten tdv');
   const cKV  = fi('khuvuc', 'khu vuc');
   const cMI  = fi('mien');
