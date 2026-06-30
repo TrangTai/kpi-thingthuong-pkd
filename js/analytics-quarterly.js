@@ -285,11 +285,11 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskh
   const ckNhomKhSets  = {};
   if (spNhomMap && hasCK) {
     Object.entries(ckByMaSP).forEach(([sp, {ds}]) => {
-      const nh = spNhomMap[sp]; if (!nh) return;
+      const nh = spNhomMap[sp] || 'BÁN PHỦ HẾT';
       ckNhomDsMap[nh] = (ckNhomDsMap[nh]||0) + ds;
     });
     Object.entries(ckBySPKhSet).forEach(([sp, khSet]) => {
-      const nh = spNhomMap[sp]; if (!nh) return;
+      const nh = spNhomMap[sp] || 'BÁN PHỦ HẾT';
       if (!ckNhomKhSets[nh]) ckNhomKhSets[nh] = new Set();
       khSet.forEach(kh => ckNhomKhSets[nh].add(kh));
     });
@@ -349,7 +349,7 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskh
   const nhomDsMap = {};
   if (spNhomMap) {
     Object.entries(byMaSPTotal).forEach(([sp,{ds}]) => {
-      const nh = spNhomMap[sp]; if (!nh) return;
+      const nh = spNhomMap[sp] || 'BÁN PHỦ HẾT';
       nhomDsMap[nh] = (nhomDsMap[nh]||0) + ds;
     });
   }
@@ -359,13 +359,13 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskh
   if (spNhomMap) {
     const bySPKh6 = qData?.bySPKhSet || {};
     Object.entries(bySPKh6).forEach(([sp, khSet]) => {
-      const nh = spNhomMap[sp]; if (!nh) return;
+      const nh = spNhomMap[sp] || 'BÁN PHỦ HẾT';
       if (!nhomKhSets[nh]) nhomKhSets[nh] = new Set();
       khSet.forEach(kh => nhomKhSets[nh].add(kh));
     });
     (currentOrders||[]).forEach(o => {
       if (!o.maKH || !o.maSP) return;
-      const nh = spNhomMap[o.maSP]; if (!nh) return;
+      const nh = spNhomMap[o.maSP] || 'BÁN PHỦ HẾT';
       if (!nhomKhSets[nh]) nhomKhSets[nh] = new Set();
       nhomKhSets[nh].add(o.maKH);
     });
@@ -492,6 +492,23 @@ function renderQuarterlyReport(data) {
     }).join('');
   };
 
+  // Bảng % đạt DS Quý theo TDV (chỉ hiện khi có target)
+  const buildDsTgtTable = () => {
+    const tgtRows = tdvRows.filter(t => t.dsTongTarget > 0);
+    if (!tgtRows.length) return '<div style="color:#aaa;padding:12px;font-size:12px">Chưa có file Target — không có chỉ tiêu DS</div>';
+    const rows = tgtRows.map(t => {
+      const pct = Math.round(t.totalDS / t.dsTongTarget * 100);
+      const cls = pct >= 100 ? 'quy-tl-good' : pct >= 80 ? 'quy-tl-warn' : 'quy-tl-bad';
+      return `<tr><td>${t.tenTDV}</td><td style="text-align:right">${vndM(t.totalDS)}</td><td style="text-align:right">${vndM(t.dsTongTarget)}</td><td class="${cls}" style="text-align:center;font-weight:700">${pct}%</td></tr>`;
+    });
+    const totDS = tgtRows.reduce((s,t)=>s+t.totalDS,0);
+    const totTg = tgtRows.reduce((s,t)=>s+t.dsTongTarget,0);
+    const totPct = totTg > 0 ? Math.round(totDS/totTg*100) : 0;
+    const totCls = totPct >= 100 ? 'quy-tl-good' : totPct >= 80 ? 'quy-tl-warn' : 'quy-tl-bad';
+    return `<table class="quy-tbl"><thead><tr><th>Tên TDV</th><th style="text-align:right">DS Thực Đạt</th><th style="text-align:right">Target Quý</th><th style="text-align:center">% Đạt Quý</th></tr></thead><tbody>${rows.join('')}<tr class="quy-tbl-total"><td>Tổng</td><td style="text-align:right">${vndM(totDS)}</td><td style="text-align:right">${vndM(totTg)}</td><td class="${totCls}" style="text-align:center;font-weight:700">${totPct}%</td></tr></tbody></table>`;
+  };
+  const hasDSTgt = tdvRows.some(t => t.dsTongTarget > 0);
+
   const s1 = `
 <div class="quy-section">
   <div class="quy-sec-hdr"><span class="quy-sec-num">I</span> DOANH SỐ</div>
@@ -515,6 +532,10 @@ function renderQuarterlyReport(data) {
       ${hasCK?'<span><span style="display:inline-block;width:10px;height:4px;background:#B0C4DE;border-radius:2px;margin-right:4px;vertical-align:middle"></span>CK</span>':''}
     </div>
   </div>
+  ${hasDSTgt ? `<div class="quy-chart-card" style="margin-top:12px">
+    <div class="quy-chart-title">03 · % ĐẠT DOANH SỐ QUÝ THEO TDV</div>
+    ${buildDsTgtTable()}
+  </div>` : ''}
 </div>`;
 
   // ── Section II: Khách hàng ───────────────────────────────
@@ -945,7 +966,7 @@ function onQuyMienChange(selectedMien) {
       Object.entries(spDsM).forEach(([sp, ds]) => {
         filtSPDs[sp] = (filtSPDs[sp]||0) + ds;
         if (spNhomMap) {
-          const nh = spNhomMap[sp]; if (!nh) return;
+          const nh = spNhomMap[sp] || 'BÁN PHỦ HẾT';
           filtNhomDsMap[nh] = (filtNhomDsMap[nh]||0) + ds;
         }
       });
@@ -954,7 +975,7 @@ function onQuyMienChange(selectedMien) {
     if (spNhomMap) {
       const tdvSpKh = rawData.byTdvSPKhSet?.[tdv] || {};
       Object.entries(tdvSpKh).forEach(([sp, khSet]) => {
-        const nh = spNhomMap[sp]; if (!nh) return;
+        const nh = spNhomMap[sp] || 'BÁN PHỦ HẾT';
         if (!filtNhomKhSets[nh]) filtNhomKhSets[nh] = new Set();
         khSet.forEach(kh => filtNhomKhSets[nh].add(kh));
       });
@@ -974,12 +995,12 @@ function onQuyMienChange(selectedMien) {
     ckMonthKeys.forEach(mk => {
       const spDsM = ckByTdvMonthF[tdv]?.[mk]?.spDsMap || {};
       Object.entries(spDsM).forEach(([sp, ds]) => {
-        if (spNhomMap) { const nh = spNhomMap[sp]; if (nh) filtCkNhomDsMap[nh] = (filtCkNhomDsMap[nh]||0) + ds; }
+        if (spNhomMap) { const nh = spNhomMap[sp] || 'BÁN PHỦ HẾT'; filtCkNhomDsMap[nh] = (filtCkNhomDsMap[nh]||0) + ds; }
       });
     });
     if (spNhomMap) {
       Object.entries(ckByTdvSPKhSetF[tdv] || {}).forEach(([sp, khSet]) => {
-        const nh = spNhomMap[sp]; if (!nh) return;
+        const nh = spNhomMap[sp] || 'BÁN PHỦ HẾT';
         if (!filtCkNhomKhSets[nh]) filtCkNhomKhSets[nh] = new Set();
         khSet.forEach(kh => filtCkNhomKhSets[nh].add(kh));
       });
