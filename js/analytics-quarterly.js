@@ -624,9 +624,9 @@ function renderQuarterlyReport(data) {
             <span class="quy-bar-pct">${pct}%</span>
             ${hasCK?growthBadge(ds,ckDs):''}
           </div>
-          ${hasCK?`<div style="display:flex;align-items:center;gap:6px;opacity:.55">
+          ${hasCK?`<div style="display:flex;align-items:center;gap:6px">
             <div class="quy-bar-wrap" style="flex:1"><div class="quy-bar-fill" style="width:${wCK}%;background:#9AABB9"></div></div>
-            <span class="quy-bar-val" style="font-size:11px">CK: ${vndM(ckDs)}</span>
+            <span class="quy-bar-val" style="font-size:11px;color:#7A8FA0">CK: ${vndM(ckDs)}</span>
             <span class="quy-bar-pct"></span><span style="min-width:48px"></span>
           </div>`:''}
         </div>
@@ -650,9 +650,9 @@ function renderQuarterlyReport(data) {
               <span class="quy-bar-pct">${pct}%</span>
               ${hasCK?growthBadge(cnt,ckCnt):''}
             </div>
-            ${hasCK?`<div style="display:flex;align-items:center;gap:6px;opacity:.55">
+            ${hasCK?`<div style="display:flex;align-items:center;gap:6px">
               <div class="quy-bar-wrap" style="flex:1"><div class="quy-bar-fill" style="width:${wCK}%;background:#9AABB9"></div></div>
-              <span class="quy-bar-val" style="font-size:11px">CK: ${ckCnt.toLocaleString('vi-VN')}</span>
+              <span class="quy-bar-val" style="font-size:11px;color:#7A8FA0">CK: ${ckCnt.toLocaleString('vi-VN')}</span>
               <span class="quy-bar-pct"></span><span style="min-width:48px"></span>
             </div>`:''}
           </div>
@@ -990,8 +990,15 @@ function onQuyMienChange(selectedMien) {
     ? Object.fromEntries(Object.entries(filtCkNhomKhSets).map(([nh,s]) => [nh, s.size]))
     : _quyReport.ckNhomDpkhMap;
 
-  // topSP từ filtered TDVs
-  const rawByMaSP   = rawData.byMaSP || {};
+  // topSP từ filtered TDVs — tính cả CK DS per SP từ TDV đã lọc
+  const rawByMaSP  = rawData.byMaSP || {};
+  const filtCkSPDs = {};
+  filtTdvSet.forEach(tdv => {
+    ckMonthKeys.forEach(mk => {
+      const spDsM = ckByTdvMonthF[tdv]?.[mk]?.spDsMap || {};
+      Object.entries(spDsM).forEach(([sp, ds]) => { filtCkSPDs[sp] = (filtCkSPDs[sp]||0) + ds; });
+    });
+  });
   const filtTotalDS = Object.values(filtSPDs).reduce((s,v)=>s+v,0);
   const topSP = Object.keys(filtSPDs).length > 0
     ? Object.entries(filtSPDs)
@@ -1001,7 +1008,7 @@ function onQuyMienChange(selectedMien) {
           tenSP: rawByMaSP[sp]?.tenSP || sp,
           ds,
           pct: filtTotalDS>0 ? ds/filtTotalDS : 0,
-          ckDS: 0,
+          ckDS: filtCkSPDs[sp] || 0,
         }))
     : _quyReport.topSP;
 
