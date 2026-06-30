@@ -332,6 +332,7 @@ let _khMoi6ThangData      = null; // parsed DONHANG_6_THANG: {maKH → totalDS6M
 let _lastKhMoiCurrentDsMap = null; // {maKH → thisMonthDS} computed on last calculate, saved to cloud
 let _qData           = null; // quarterly data from DONHANG_6_THANG: {byTdvMonth, byMaSP, bySPKhSet}
 let _qSpNhom         = null; // SP→Nhóm mapping: {maSP → nhomName}
+let _qDataCurrent    = null; // current quarter full order file (all 3 months, standalone)
 let _qDataCK         = null; // same-quarter previous year order data for comparison
 
 function setupKhMoiUpload() {
@@ -501,6 +502,41 @@ async function onLoadKhMoiCloud() {
 
 // ─── Báo Cáo Quý tab ─────────────────────────────────────────
 function setupQuarterlyUpload() {
+  const _readQuyFile = (file, onParsed, errMsg) => {
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try { onParsed(parseQuyOrderFileCK(ev.target.result)); }
+      catch(err) { alert(errMsg + ': ' + err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+
+  const inpCurrent = document.getElementById('input-quy-current');
+  if (inpCurrent) {
+    inpCurrent.addEventListener('change', e => {
+      const file = e.target.files[0]; if (!file) return;
+      document.getElementById('label-quy-current').textContent = file.name;
+      _readQuyFile(file, parsed => {
+        _qDataCurrent = parsed;
+        const n = parsed ? Object.keys(parsed.byTdv || {}).length : 0;
+        _updateQuyStatus();
+        if (!n) alert('Không đọc được dữ liệu. Kiểm tra format file (cột J = Mã TDV, cột I = Tổng Tiền).');
+      }, 'Lỗi đọc DOANHSOQUY');
+    });
+  }
+
+  const inpCK = document.getElementById('input-quy-ck');
+  if (inpCK) {
+    inpCK.addEventListener('change', e => {
+      const file = e.target.files[0]; if (!file) return;
+      document.getElementById('label-quy-ck').textContent = file.name;
+      _readQuyFile(file, parsed => {
+        _qDataCK = parsed;
+        _updateQuyStatus();
+      }, 'Lỗi đọc file cùng kỳ');
+    });
+  }
+
   const inpNhom = document.getElementById('input-sp-nhom');
   if (inpNhom) {
     inpNhom.addEventListener('change', e => {
@@ -510,27 +546,8 @@ function setupQuarterlyUpload() {
       reader.onload = ev => {
         try {
           _qSpNhom = parseSpNhomFile(ev.target.result);
-          const n = Object.keys(_qSpNhom).length;
           _updateQuyStatus();
         } catch(err) { alert('Lỗi đọc SP Nhóm: ' + err.message); }
-      };
-      reader.readAsArrayBuffer(file);
-    });
-  }
-
-  const inpCK = document.getElementById('input-quy-ck');
-  if (inpCK) {
-    inpCK.addEventListener('change', e => {
-      const file = e.target.files[0]; if (!file) return;
-      document.getElementById('label-quy-ck').textContent = file.name;
-      const reader = new FileReader();
-      reader.onload = ev => {
-        try {
-          _qDataCK = parseQuyOrderFileCK(ev.target.result);
-          const n = _qDataCK ? Object.keys(_qDataCK.byTdv || {}).length : 0;
-          _updateQuyStatus();
-          if (!n) alert('Không đọc được dữ liệu cùng kỳ. Kiểm tra format file (cột J = Mã TDV, cột I = Tổng Tiền).');
-        } catch(err) { alert('Lỗi đọc file cùng kỳ: ' + err.message); }
       };
       reader.readAsArrayBuffer(file);
     });
@@ -539,11 +556,13 @@ function setupQuarterlyUpload() {
 
 function _updateQuyStatus() {
   const parts = [];
-  if (_qSpNhom) parts.push(`Nhóm SP: ${Object.keys(_qSpNhom).length} SP`);
-  if (_qDataCK) {
-    const n = Object.keys(_qDataCK.byTdv || {}).length;
-    parts.push(`CK: ${n} TDV`);
+  if (_qDataCurrent) {
+    const n = Object.keys(_qDataCurrent.byTdv || {}).length;
+    const months = Object.keys(_qDataCurrent.byMonth || {}).sort();
+    parts.push(`${n} TDV · ${months.length} tháng`);
   }
+  if (_qDataCK) parts.push(`CK: ${Object.keys(_qDataCK.byTdv||{}).length} TDV`);
+  if (_qSpNhom)  parts.push(`Nhóm: ${Object.keys(_qSpNhom).length} SP`);
   const el = document.getElementById('quy-status');
   if (el) el.textContent = parts.join(' · ');
 }
@@ -554,18 +573,28 @@ async function onQuarterlyCalculate() {
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang tạo...'; }
   out.innerHTML = '<div style="padding:24px;color:#888">Đang xử lý...</div>';
   try {
-    let currentOrders = staticData.donHangOrders || [];
-    if (staticData.dhLonOrders?.length) currentOrders = currentOrders.concat(staticData.dhLonOrders);
-    if (!currentOrders.length) {
-      out.innerHTML = '<div style="padding:24px;color:#C0392B">Cần tính Tính Thưởng trước (cần dữ liệu ĐƠN HÀNG tháng hiện tại).</div>';
+    // Primary path: standalone DOANHSOQUY file (all 3 months of quarter)
+    // Fallback path: combined DONHANG_6_THANG + current month orders (old flow)
+    let qData, currentOrders;
+    if (_qDataCurrent) {
+      qData         = _qDataCurrent;
+      currentOrders = [];
+    } else if (_qData || (staticData.donHangOrders || []).length) {
+      qData         = _qData;
+      currentOrders = staticData.donHangOrders || [];
+      if (staticData.dhLonOrders?.length) currentOrders = currentOrders.concat(staticData.dhLonOrders);
+    } else {
+      out.innerHTML = '<div style="padding:24px;color:#C0392B">Vui lòng upload file <b>DOANHSOQUY.xlsx</b> trước.</div>';
       return;
     }
+
     const dskhByTdv = {};
     (_khMoiDskhList || []).forEach(kh => {
       const t = (kh.maTDV || '').toUpperCase().trim();
       if (t) dskhByTdv[t] = (dskhByTdv[t] || 0) + 1;
     });
-    const result = calculateQuarterlyReport(_qData, currentOrders, _qSpNhom, staticData.targets || [], dskhByTdv, _qDataCK);
+
+    const result = calculateQuarterlyReport(qData, currentOrders, _qSpNhom, staticData.targets || [], dskhByTdv, _qDataCK);
     out.innerHTML = renderQuarterlyReport(result);
     setTimeout(() => initQuyCharts(), 80);
   } catch(err) {

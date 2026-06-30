@@ -338,26 +338,32 @@
 <!-- Báo Cáo Quý Section -->
 <section id="quy-section" style="display:none">
   <div class="ci-upload-bar">
-    <label class="upload-label" for="input-quy-ck">
-      <span class="upload-icon">📊</span>
+    <label class="upload-label" for="input-quy-current">
+      <span class="upload-icon">📋</span>
       <span class="file-badge">DOANHSOQUY.xlsx</span>
     </label>
+    <input type="file" id="input-quy-current" accept=".xlsx,.xls" style="display:none">
+    <span id="label-quy-current" style="font-size:12px;color:#555;margin-right:10px">Đơn hàng quý hiện tại (bắt buộc)</span>
+    <label class="upload-label" for="input-quy-ck">
+      <span class="upload-icon">📊</span>
+      <span class="file-badge">DOANHSOQUY_CK.xlsx</span>
+    </label>
     <input type="file" id="input-quy-ck" accept=".xlsx,.xls" style="display:none">
-    <span id="label-quy-ck" style="font-size:12px;color:#555;margin-right:10px">Đơn hàng cùng kỳ năm trước (tuỳ chọn)</span>
+    <span id="label-quy-ck" style="font-size:12px;color:#555;margin-right:10px">Cùng kỳ năm trước (tuỳ chọn)</span>
     <label class="upload-label" for="input-sp-nhom">
       <span class="upload-icon">🗂</span>
       <span class="file-badge">SP_NHOM.xlsx</span>
     </label>
     <input type="file" id="input-sp-nhom" accept=".xlsx,.xls" style="display:none">
-    <span id="label-sp-nhom" style="font-size:12px;color:#555;margin-right:10px">Mapping Mã SP → Nhóm hàng (tuỳ chọn)</span>
+    <span id="label-sp-nhom" style="font-size:12px;color:#555;margin-right:10px">Mapping Mã SP → Nhóm (tuỳ chọn)</span>
     <button id="btn-quy-calc" onclick="onQuarterlyCalculate()">📅 Tạo Báo Cáo Quý</button>
     <span id="quy-status" style="font-size:12px;color:#888;margin-left:8px"></span>
   </div>
   <div id="quy-output">
     <div style="padding:32px;text-align:center;color:#aaa;font-size:13px">
-      Cần có dữ liệu Tính Thưởng (ĐƠN HÀNG tháng hiện tại) và DONHANG_6_THANG (từ tab KH Mới).<br>
-      Tuỳ chọn: upload <b>DOANHSOQUY.xlsx</b> (đơn hàng cùng kỳ năm trước) để xem so sánh tăng giảm.<br>
-      Tuỳ chọn: upload file <b>SP_NHOM.xlsx</b> (cột: Mã SP | Nhóm) để hiện biểu đồ nhóm hàng.
+      Upload file <b>DOANHSOQUY.xlsx</b> (đơn hàng cả quý: Mã ĐH · Ngày ĐH · Mã KH · Mã SP · Tổng Tiền · Mã TDV) rồi nhấn Tạo Báo Cáo Quý.<br>
+      Tuỳ chọn: upload <b>DOANHSOQUY_CK.xlsx</b> (cùng quý năm trước) để hiện so sánh tăng/giảm.<br>
+      Tuỳ chọn: upload <b>SP_NHOM.xlsx</b> (cột: Mã SP | Nhóm) để hiện biểu đồ nhóm hàng.
     </div>
   </div>
 </section>
@@ -400,9 +406,9 @@
 <script src="js/analytics-mien.js"></script>
 <script src="js/analytics-checkin.js?v=6"></script>
 <script src="js/analytics-kh-moi.js?v=3"></script>
-<script src="js/analytics-quarterly.js?v=4"></script>
+<script src="js/analytics-quarterly.js?v=5"></script>
 <script src="js/kpi-card.js"></script>
-<script src="js/app.js?v=5"></script>
+<script src="js/app.js?v=6"></script>
 
 </div><!-- end app-main -->
 </body>

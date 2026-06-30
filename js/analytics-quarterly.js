@@ -40,6 +40,7 @@ function parseQuyOrderFileCK(arrayBuffer) {
   const byMonth      = {};  // {'yyyy-mm': totalDs}
   const byMonthKhMap = {};  // {'yyyy-mm': {maKH: totalDs}}
   const byTdvMonth   = {};  // {tdv: {'yyyy-mm': {ds, khDsMap}}}
+  const tdvInfo      = {};  // {tdv: {tenTDV, khuVuc}} extracted from file
 
   for (let i = 1; i < rows.length; i++) {
     const row   = rows[i];
@@ -49,6 +50,14 @@ function parseQuyOrderFileCK(arrayBuffer) {
     const tenSP = String(row[5] || '').trim();
     const ds    = parseFloat(row[8]) || 0;
     if (!maTDV || ds <= 0) continue;
+
+    // TDV name/area from file columns K, L
+    if (!tdvInfo[maTDV]) {
+      tdvInfo[maTDV] = {
+        tenTDV: String(row[10] || '').trim() || maTDV,
+        khuVuc: String(row[11] || '').trim(),
+      };
+    }
 
     // Parse date → 'yyyy-mm'
     let monthKey = '';
@@ -94,7 +103,7 @@ function parseQuyOrderFileCK(arrayBuffer) {
       if (maKH) byTdvMonth[maTDV][monthKey].khDsMap[maKH] = (byTdvMonth[maTDV][monthKey].khDsMap[maKH]||0) + ds;
     }
   }
-  return { byTdv, byMaSP, bySPKhSet, byMonth, byMonthKhMap, byTdvMonth };
+  return { byTdv, byMaSP, bySPKhSet, byMonth, byMonthKhMap, byTdvMonth, tdvInfo };
 }
 
 // ─── Calculator ──────────────────────────────────────────────
@@ -134,7 +143,8 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskh
   });
 
   // ── Per-TDV quarterly stats ───────────────────────────────
-  const h6ByTdv = qData?.byTdvMonth || {};
+  const h6ByTdv    = qData?.byTdvMonth || {};
+  const fileTdvInfo = qData?.tdvInfo    || {}; // TDV name/area extracted from file
   const allTdvs = new Set([...Object.keys(h6ByTdv), ...Object.keys(curByTdv)]);
   const tdvRows = [];
 
@@ -144,8 +154,13 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskh
 
     const mStats = {};
     qMonthKeys.forEach((mk, idx) => {
-      const d = idx < 2 ? (h6ByTdv[tdv]?.[mk] || {ds:0,khDsMap:{},spDsMap:{}})
-                        : (curByTdv[tdv]        || {ds:0,khDsMap:{},spDsMap:{}});
+      // Prefer file data (byTdvMonth) for every month; fall back to curByTdv for current month only
+      const fromFile = h6ByTdv[tdv]?.[mk];
+      const d = fromFile
+        ? fromFile
+        : idx === 2
+          ? (curByTdv[tdv] || {ds:0,khDsMap:{},spDsMap:{}})
+          : {ds:0,khDsMap:{},spDsMap:{}};
       const dpkh = Object.values(d.khDsMap||{}).filter(v => v >= QUY_MIN_DS).length;
       const dpmh = Object.values(d.spDsMap||{}).filter(v => v >= QUY_MIN_DS).length;
       mStats[mk] = { ds: d.ds||0, dpkh, dpmh };
@@ -155,9 +170,10 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskh
     const totalDPKH = qMonthKeys.reduce((s,mk) => s+(mStats[mk]?.dpkh||0), 0);
     const totalDPMH = qMonthKeys.reduce((s,mk) => s+(mStats[mk]?.dpmh||0), 0);
 
+    const fileInfo = fileTdvInfo[tdv] || {};
     tdvRows.push({
       maTDV: tdv,
-      tenTDV:       info.tenTDV      || tdv,
+      tenTDV:       info.tenTDV      || fileInfo.tenTDV || tdv,
       mien:         info.mien        || '',
       qlbhCode:     (info.qlbhCode   || '').toUpperCase(),
       dpkhTarget:   info.dpkhTarget  || 0,
