@@ -182,7 +182,7 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskh
     tdvRows.push({
       maTDV: tdv,
       tenTDV:       info.tenTDV      || fileInfo.tenTDV || tdv,
-      mien:         info.mien        || '',
+      mien:         info.mien        || fileInfo.khuVuc || '',
       qlbhCode:     (info.qlbhCode   || '').toUpperCase(),
       dpkhTarget:   info.dpkhTarget  || 0,
       dpmhTarget:   info.dpmhTarget  || 0,
@@ -251,7 +251,7 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskh
   });
 
   const ckTotalDS   = ckDsByMonth.reduce((s,v) => s+v, 0);
-  const ckTotalDPKH = ckDpkhByMonth.reduce((s,v) => s+v, 0);
+  // ckTotalDPKH computed after per-TDV CK loop below
 
   // CK SP map for Top SP comparison
   const ckByMaSPTotal = {};
@@ -326,7 +326,9 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskh
 
   // ── Aggregates ────────────────────────────────────────────
   const totalDS   = tdvRows.reduce((s,t) => s+t.totalDS, 0);
-  const totalDPKH = dpkhByMonth.reduce((s,v) => s+v.dpkh, 0);
+  // totalDPKH = tổng KH unique (mỗi mã KH chỉ tính 1 lần trong quý)
+  const totalDPKH    = tdvRows.reduce((s,t) => s + t.distinctKhCount, 0);
+  const ckTotalDPKH  = tdvRows.reduce((s,t) => s + (t.ckDistinctKh||0), 0);
   const datCount  = tdvRows.filter(t => t.datTarget).length;
 
   // Lead nhóm
@@ -402,6 +404,35 @@ function renderQuarterlyReport(data) {
     : (qlbhCount>0 ? `${datQLBHCount}/${qlbhCount} QLBH đạt chỉ tiêu` : `${datCount}/${tdvCount} TDV đạt chỉ tiêu`);
   const card03Title = growthPct03 !== null ? '03 · TĂNG TRƯỞNG DS QUÝ' : '03 · % ĐẠT TARGET QUÝ';
 
+  // ── HTML bar chart 02 (thay canvas để cho phép growth badge bên phải) ──
+  const _buildHtmlBarChart02 = () => {
+    const sorted   = [...tdvRows].sort((a,b) => b.totalDS - a.totalDS);
+    const maxDS    = sorted[0]?.totalDS || 1;
+    const maxCKDS  = hasCK ? Math.max(...sorted.map(t => t.ckDS||0), 1) : 1;
+    const maxAll   = Math.max(maxDS, maxCKDS);
+    return sorted.map(t => {
+      const wCur  = Math.round(t.totalDS / maxAll * 100);
+      const wCK   = hasCK ? Math.round((t.ckDS||0) / maxAll * 100) : 0;
+      const badge = hasCK && t.ckDS > 0 ? growthBadge(t.totalDS, t.ckDS) : '';
+      const ckBar = hasCK
+        ? `<div style="height:4px;background:#B0C4DE;border-radius:2px;width:${wCK}%;margin-top:3px;opacity:.8"></div>`
+        : '';
+      return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f0f4f8">
+        <span style="min-width:110px;max-width:110px;font-size:11px;color:#334;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.tenTDV}</span>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="flex:1;background:#EEF2F7;border-radius:3px;height:14px;position:relative">
+              <div style="width:${wCur}%;height:100%;background:#3A7BD5;border-radius:3px"></div>
+            </div>
+            <span style="min-width:44px;font-size:11px;font-weight:700;color:#3A7BD5;text-align:right">${vndM(t.totalDS)}</span>
+          </div>
+          ${ckBar}
+        </div>
+        <span style="min-width:52px;text-align:right;font-size:11px">${badge}</span>
+      </div>`;
+    }).join('');
+  };
+
   const s1 = `
 <div class="quy-section">
   <div class="quy-sec-hdr"><span class="quy-sec-num">I</span> DOANH SỐ</div>
@@ -419,8 +450,11 @@ function renderQuarterlyReport(data) {
   </div>
   <div class="quy-chart-card" style="margin-top:12px">
     <div class="quy-chart-title">02 · DOANH SỐ THEO TRÌNH DƯỢC VIÊN${hasCK?'<span class="quy-chart-unit"><span class="quy-legend-dot" style="background:#3A7BD5"></span>Quý này &nbsp;<span class="quy-legend-dot" style="background:#B0C4DE"></span>Cùng kỳ</span>':''}</div>
-    <div style="position:relative;height:${Math.max(160, tdvRows.length*30)}px"><canvas id="quy-chart-02"></canvas></div>
-    ${_buildTdvCkSummary(tdvRows, vndM, growthBadge, hasCK)}
+    <div style="padding:4px 0">${_buildHtmlBarChart02()}</div>
+    <div style="margin-top:8px;display:flex;gap:16px;font-size:10px;color:#9AABB9">
+      <span><span style="display:inline-block;width:10px;height:10px;background:#3A7BD5;border-radius:2px;margin-right:4px"></span>DS Quý này</span>
+      ${hasCK?'<span><span style="display:inline-block;width:10px;height:4px;background:#B0C4DE;border-radius:2px;margin-right:4px;vertical-align:middle"></span>CK</span>':''}
+    </div>
   </div>
 </div>`;
 
@@ -429,44 +463,52 @@ function renderQuarterlyReport(data) {
   const hasDskh = tdvRows.some(t => t.totalKhDskh > 0);
 
   const buildDpkhTable05 = () => {
-    const hdrCK = hasCK ? '<th class="quy-ck-col">KH TB CK</th><th class="quy-ck-col">TT/CK</th>' : '';
+    // Cột: Tên TDV | KH TB (avg tháng) | ĐPKH Quý (unique KH ≥1 tháng) | Tỷ lệ | [KH TB CK | ĐPKH Quý CK | TT/CK]
+    const hdrCK = hasCK ? '<th class="quy-ck-col">KH TB CK</th><th class="quy-ck-col">ĐPKHQuý CK</th><th class="quy-ck-col">TT/CK</th>' : '';
     const rows = tdvRows.map(t => {
-      const tb  = Math.round(t.totalDPKH / 3);
-      const tot = hasDskh ? (t.totalKhDskh || 0) : (t.dpkhTarget || 0);
-      const tl  = tot > 0 ? Math.round(tb / tot * 100) : 0;
-      const cls = tl>=100?'quy-tl-good':tl>=60?'quy-tl-warn':'quy-tl-bad';
-      const ckTb = hasCK ? Math.round(t.ckDPKH / 3) : null;
-      const ckCols = hasCK ? `<td class="quy-ck-col">${ckTb}</td><td class="quy-ck-col">${growthBadge(tb, ckTb||1)}</td>` : '';
-      return `<tr><td>${t.tenTDV}</td><td>${tb}</td><td>${tot||'—'}</td><td class="${cls}">${tl}%</td>${ckCols}</tr>`;
+      const tb      = Math.round(t.totalDPKH / 3);   // ĐPKH TB tháng
+      const uniq    = t.distinctKhCount;              // ĐPKH Quý = unique KH
+      const tl      = uniq > 0 ? Math.round(tb / uniq * 100) : 0;
+      const cls     = tl>=100?'quy-tl-good':tl>=60?'quy-tl-warn':'quy-tl-bad';
+      const ckTb    = hasCK ? Math.round(t.ckDPKH / 3) : null;
+      const ckUniq  = hasCK ? (t.ckDistinctKh || 0) : null;
+      const ckCols  = hasCK
+        ? `<td class="quy-ck-col">${ckTb}</td><td class="quy-ck-col">${ckUniq}</td><td class="quy-ck-col">${growthBadge(tb, ckTb||1)}</td>`
+        : '';
+      return `<tr><td>${t.tenTDV}</td><td>${tb}</td><td>${uniq}</td><td class="${cls}">${tl}%</td>${ckCols}</tr>`;
     });
-    const totTb  = Math.round(tdvRows.reduce((s,t)=>s+t.totalDPKH,0) / 3);
-    const totTot = hasDskh ? tdvRows.reduce((s,t)=>s+t.totalKhDskh,0) : tdvRows.reduce((s,t)=>s+t.dpkhTarget,0);
-    const totTl = totTot>0 ? Math.round(totTb/totTot*100) : 0;
-    const hdrTot = hasDskh ? 'Tổng KH' : 'Target TB';
-    const ckTotTb = hasCK ? Math.round(ckTotalDPKH/3) : null;
-    const ckTotCols = hasCK ? `<td class="quy-ck-col">${ckTotTb}</td><td class="quy-ck-col">${growthBadge(totTb, ckTotTb||1)}</td>` : '';
-    return `<table class="quy-tbl"><thead><tr><th>Tên TDV</th><th>KH TB</th><th>${hdrTot}</th><th>Tỷ lệ</th>${hdrCK}</tr></thead><tbody>${rows.join('')}<tr class="quy-tbl-total"><td>Tổng</td><td>${totTb}</td><td>${totTot||'—'}</td><td>${totTl}%</td>${ckTotCols}</tr></tbody></table>`;
+    const totTb   = Math.round(tdvRows.reduce((s,t)=>s+t.totalDPKH,0) / 3);
+    const totUniq = tdvRows.reduce((s,t)=>s+t.distinctKhCount, 0);
+    const totTl   = totUniq > 0 ? Math.round(totTb / totUniq * 100) : 0;
+    const ckTotTb   = hasCK ? Math.round(tdvRows.reduce((s,t)=>s+t.ckDPKH,0) / 3) : null;
+    const ckTotUniq = hasCK ? tdvRows.reduce((s,t)=>s+(t.ckDistinctKh||0), 0) : null;
+    const ckTotCols = hasCK
+      ? `<td class="quy-ck-col">${ckTotTb}</td><td class="quy-ck-col">${ckTotUniq}</td><td class="quy-ck-col">${growthBadge(totTb, ckTotTb||1)}</td>`
+      : '';
+    return `<table class="quy-tbl"><thead><tr><th>Tên TDV</th><th>KH TB/tháng</th><th>ĐPKH Quý</th><th>KH TB/ĐPKH</th>${hdrCK}</tr></thead><tbody>${rows.join('')}<tr class="quy-tbl-total"><td>Tổng</td><td>${totTb}</td><td>${totUniq}</td><td>${totTl}%</td>${ckTotCols}</tr></tbody></table>`;
   };
 
   const buildDpkhTable06 = () => {
-    // KH Quý = số KH unique đủ ĐK (≥500k) trong ít nhất 1 tháng của quý
+    // KH Quý = KH unique đủ ĐK | Tổng KH = tổng KH trong file DSKH
     const hdrCK = hasCK ? '<th class="quy-ck-col">KH Quý CK</th><th class="quy-ck-col">TT/CK</th>' : '';
     const rows = tdvRows.map(t => {
-      const quy = t.distinctKhCount;   // KH unique trong quý (đủ điều kiện ≥1 tháng)
-      const tot = hasDskh ? (t.totalKhDskh || 0) : (t.dpkhTarget || 0);
+      const quy = t.distinctKhCount;
+      const tot = t.totalKhDskh || 0;   // luôn dùng DSKH
       const tl  = tot > 0 ? Math.round(quy / tot * 100) : 0;
       const cls = tl>=100?'quy-tl-good':tl>=60?'quy-tl-warn':'quy-tl-bad';
-      // CK distinctKh = KH unique đủ ĐK trong ít nhất 1 tháng cùng kỳ
-      const ckCols = hasCK ? `<td class="quy-ck-col">${t.ckDistinctKh||'—'}</td><td class="quy-ck-col">${t.ckDistinctKh?growthBadge(quy, t.ckDistinctKh):''}</td>` : '';
-      return `<tr><td>${t.tenTDV}</td><td>${quy}</td><td>${tot||'—'}</td><td class="${cls}">${tl}%</td>${ckCols}</tr>`;
+      const ckCols = hasCK
+        ? `<td class="quy-ck-col">${t.ckDistinctKh||'—'}</td><td class="quy-ck-col">${t.ckDistinctKh?growthBadge(quy, t.ckDistinctKh):''}</td>`
+        : '';
+      return `<tr><td>${t.tenTDV}</td><td>${quy}</td><td>${tot||'—'}</td><td class="${cls}">${tot>0?tl+'%':'—'}</td>${ckCols}</tr>`;
     });
-    const tot   = tdvRows.reduce((s,t)=>s+t.distinctKhCount,0);
-    const totTg = hasDskh ? tdvRows.reduce((s,t)=>s+t.totalKhDskh,0) : tdvRows.reduce((s,t)=>s+t.dpkhTarget,0);
-    const totTl = totTg>0 ? Math.round(tot/totTg*100) : 0;
-    const hdrTot = hasDskh ? 'Tổng KH (DSKH)' : 'Target KH';
+    const tot    = tdvRows.reduce((s,t)=>s+t.distinctKhCount,0);
+    const totTg  = tdvRows.reduce((s,t)=>s+(t.totalKhDskh||0),0);
+    const totTl  = totTg>0 ? Math.round(tot/totTg*100) : 0;
     const totCkDist = tdvRows.reduce((s,t)=>s+(t.ckDistinctKh||0),0);
-    const ckTotCols = hasCK ? `<td class="quy-ck-col">${totCkDist||'—'}</td><td class="quy-ck-col">${totCkDist?growthBadge(tot,totCkDist):''}</td>` : '';
-    return `<table class="quy-tbl"><thead><tr><th>Tên TDV</th><th>KH Quý<br><span style="font-weight:400;font-size:10px;color:#9AABB9">KH unique ≥${(QUY_MIN_DS/1000).toFixed(0)}k ≥1 tháng</span></th><th>${hdrTot}</th><th>Tỷ lệ</th>${hdrCK}</tr></thead><tbody>${rows.join('')}<tr class="quy-tbl-total"><td>Tổng</td><td>${tot}</td><td>${totTg||'—'}</td><td>${totTl}%</td>${ckTotCols}</tr></tbody></table>`;
+    const ckTotCols = hasCK
+      ? `<td class="quy-ck-col">${totCkDist||'—'}</td><td class="quy-ck-col">${totCkDist?growthBadge(tot,totCkDist):''}</td>`
+      : '';
+    return `<table class="quy-tbl"><thead><tr><th>Tên TDV</th><th>KH Quý<br><span style="font-weight:400;font-size:10px;color:#9AABB9">unique ≥${(QUY_MIN_DS/1000).toFixed(0)}k ≥1 tháng</span></th><th>Tổng KH DSKH</th><th>Tỷ lệ</th>${hdrCK}</tr></thead><tbody>${rows.join('')}<tr class="quy-tbl-total"><td>Tổng</td><td>${tot}</td><td>${totTg||'—'}</td><td>${totTg>0?totTl+'%':'—'}</td>${ckTotCols}</tr></tbody></table>`;
   };
 
   const ckDpkhLabel = hasCK
@@ -484,7 +526,7 @@ function renderQuarterlyReport(data) {
         <div class="quy-dpkh-total-box">
           <div class="quy-dpkh-total-label">TỔNG KH QUÝ</div>
           <div class="quy-dpkh-total-num">${totalDPKH.toLocaleString('vi-VN')}</div>
-          <div class="quy-dpkh-total-sub">cộng dồn ${qMonthLabels.length} tháng ĐPKH</div>
+          <div class="quy-dpkh-total-sub">KH unique đủ ĐK (DS ≥ ${(QUY_MIN_DS/1e3).toFixed(0)}k ≥1 tháng)</div>
           ${hasCK?`<div class="quy-ck-badge" style="margin-top:6px">CK: ${ckTotalDPKH.toLocaleString('vi-VN')} ${growthBadge(totalDPKH,ckTotalDPKH)}</div>`:''}
         </div>
       </div>
@@ -577,35 +619,34 @@ function renderQuarterlyReport(data) {
 
   const topSPCkHdr = hasCK ? '<th>DS Cùng kỳ</th><th>TT/CK</th>' : '';
 
-  // ĐPMH: avgMH = trung bình tháng thực (totalDPMH/3); tgt = target hàng tháng
-  const maxAvgMH = Math.max(...tdvRows.map(t => Math.round(t.totalDPMH/3)), 1);
-  const dpmhRows = tdvRows.map(t => {
-    const tgt    = t.dpmhTarget || 0;
-    const avgMH  = Math.round(t.totalDPMH / 3);  // TB tháng thực tế
-    const distSP = t.distinctSpCount;              // SP unique trong quý
-    const tlAvg  = tgt > 0 ? Math.round(avgMH / tgt * 100) : 0;
-    const tlCls  = tlAvg >= 100 ? 'quy-tl-good' : tlAvg >= 60 ? 'quy-tl-warn' : 'quy-tl-bad';
-    const wTgt   = tgt > 0 ? Math.min(100, Math.round(tgt / Math.max(maxAvgMH, tgt) * 100)) : 0;
-    const wAvg   = Math.round(avgMH / Math.max(maxAvgMH, tgt > 0 ? tgt : 1) * 100);
-    return `<div class="quy-dpmh-row">
-      <span class="quy-dpmh-name">${t.tenTDV.length>14?t.tenTDV.slice(0,13)+'…':t.tenTDV}</span>
-      <span class="quy-dpmh-nums">${tgt>0?tgt:'—'} / <b>${avgMH}</b></span>
-      <div class="quy-dpmh-bars">
-        <div class="quy-dpmh-bar-tgt" style="width:${wTgt}%"></div>
-        <div class="quy-dpmh-bar-quy" style="width:${wAvg}%"></div>
-      </div>
-      <span class="${tlCls}" style="font-size:10px;min-width:32px;text-align:right">${tgt>0?tlAvg+'%':distSP+' SP'}</span>
-    </div>`;
+  // ĐPMH heat table: TB tháng | Unique SP Quý | Tỷ lệ TB/Unique
+  const dpmhHeatRows = tdvRows.map(t => {
+    const avgMH  = Math.round(t.totalDPMH / 3);   // ĐPMH TB tháng
+    const uniqSP = t.distinctSpCount;              // SP unique trong quý
+    const tl     = uniqSP > 0 ? Math.round(avgMH / uniqSP * 100) : 0;
+    const heat   = tl >= 80 ? '#C8E6C9' : tl >= 60 ? '#FFF9C4' : tl >= 40 ? '#FFE0B2' : '#FFCDD2';
+    return `<tr>
+      <td>${t.tenTDV}</td>
+      <td style="text-align:center;font-weight:700">${avgMH}</td>
+      <td style="text-align:center">${uniqSP}</td>
+      <td style="text-align:center;background:${heat};font-weight:700">${uniqSP>0?tl+'%':'—'}</td>
+    </tr>`;
   }).join('');
+  const totAvgMH  = Math.round(tdvRows.reduce((s,t)=>s+t.totalDPMH,0) / 3);
+  const totUniqSP = tdvRows.reduce((s,t)=>s+t.distinctSpCount,0);
+  const totTlSP   = totUniqSP>0 ? Math.round(totAvgMH/totUniqSP*100) : 0;
 
   const s3 = `
 <div class="quy-section">
   <div class="quy-sec-hdr"><span class="quy-sec-num">III</span> SẢN PHẨM</div>
   <div class="quy-chart-grid quy-chart-grid-2">
     <div class="quy-chart-card">
-      <div class="quy-chart-title">07 · ĐỘ PHỦ MẶT HÀNG (ĐPMH) THEO TDV<span class="quy-chart-unit"><span class="quy-legend-dot" style="background:#B0C4DE"></span>Target TB &nbsp; <span class="quy-legend-dot" style="background:#003D77"></span>Thực TB/tháng</span></div>
-      <div style="font-size:10px;color:#9AABB9;margin-bottom:8px">Số MH có DS ≥ ${(QUY_MIN_DS/1000).toFixed(0)}k/tháng &nbsp;·&nbsp; Cột: Target TB / Thực TB tháng &nbsp;·&nbsp; Số SP: unique trong quý</div>
-      ${dpmhRows}
+      <div class="quy-chart-title">07 · ĐỘ PHỦ MẶT HÀNG (ĐPMH) THEO TDV</div>
+      <div style="font-size:10px;color:#9AABB9;margin-bottom:8px">SP có DS ≥ ${(QUY_MIN_DS/1000).toFixed(0)}k/tháng &nbsp;·&nbsp; Tỷ lệ = ĐPMH TB tháng / SP unique trong quý</div>
+      <table class="quy-tbl">
+        <thead><tr><th>Tên TDV</th><th style="text-align:center">ĐPMH TB/tháng</th><th style="text-align:center">SP unique Quý</th><th style="text-align:center">TB/Unique</th></tr></thead>
+        <tbody>${dpmhHeatRows}<tr class="quy-tbl-total"><td>Tổng</td><td style="text-align:center;font-weight:700">${totAvgMH}</td><td style="text-align:center">${totUniqSP}</td><td style="text-align:center;font-weight:700">${totUniqSP>0?totTlSP+'%':'—'}</td></tr></tbody>
+      </table>
     </div>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div class="quy-chart-card">
@@ -656,7 +697,7 @@ function renderQuarterlyReport(data) {
     <div class="quy-kpi-card">
       <div class="quy-kpi-label">KHÁCH HÀNG PHỦ</div>
       <div class="quy-kpi-val">${totalDPKH.toLocaleString('vi-VN')}</div>
-      <div class="quy-kpi-sub">${hasCK ? `CK: ${ckTotalDPKH.toLocaleString('vi-VN')} ${growthBadge(totalDPKH, ckTotalDPKH)}` : `Cộng dồn ĐPKH ${qMonthLabels.length} tháng`}</div>
+      <div class="quy-kpi-sub">${hasCK ? `CK: ${ckTotalDPKH.toLocaleString('vi-VN')} ${growthBadge(totalDPKH, ckTotalDPKH)}` : `KH unique đủ ĐK trong quý`}</div>
     </div>
     <div class="quy-kpi-card">
       <div class="quy-kpi-label">NHÓM DẪN ĐẦU</div>
@@ -751,38 +792,7 @@ function initQuyCharts() {
     });
   }
 
-  // ── Chart 02: DS theo TDV ────────────────────────────────
-  const c02 = document.getElementById('quy-chart-02');
-  if (c02) {
-    const sorted = [...d.tdvRows].sort((a,b) => b.totalDS - a.totalDS);
-    const datasets = [
-      { label: 'Quý này', data: sorted.map(t => t.totalDS), backgroundColor: BLUE, borderRadius: 3, barThickness: hasCK ? 12 : 18 },
-    ];
-    if (hasCK) {
-      datasets.push({ label: 'Cùng kỳ', data: sorted.map(t => t.ckDS), backgroundColor: BLUE_CK, borderRadius: 3, barThickness: 12 });
-    }
-    new Chart(c02, {
-      type: 'bar',
-      data: { labels: sorted.map(t => t.tenTDV), datasets },
-      options: {
-        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-        layout: { padding: { right: 44 } },
-        plugins: {
-          legend: { display: hasCK, position: 'top', labels: { boxWidth: 12, font: { size: 10 } } },
-          tooltip: { callbacks: { label: ctx => vndM(ctx.parsed.x) + ' VNĐ' } },
-          datalabels: {
-            anchor: 'end', align: 'end',
-            formatter: v => vndM(v),
-            color: '#555', font: { size: 9 },
-          },
-        },
-        scales: {
-          x: { grid: { color: gridColor }, ticks: { callback: v => vndM(v), color: '#888' }, beginAtZero: true },
-          y: { grid: { display: false }, ticks: { color: '#333', font: { size: 11 } } },
-        },
-      },
-    });
-  }
+  // Chart 02 đã được thay bằng HTML bar chart trong renderQuarterlyReport
 
   // ── Chart 04: DPKH theo tháng ────────────────────────────
   const c04 = document.getElementById('quy-chart-04');
@@ -843,7 +853,8 @@ function onQuyMienChange(selectedMien) {
   const dsByMonth   = qMonthKeys.map((mk,i) => ({ label: qMonthLabels[i], ds:   filtered.reduce((s,t) => s+(t.mStats[mk]?.ds  ||0), 0) }));
   const dpkhByMonth = qMonthKeys.map((mk,i) => ({ label: qMonthLabels[i], dpkh: filtered.reduce((s,t) => s+(t.mStats[mk]?.dpkh||0), 0) }));
   const totalDS   = filtered.reduce((s,t) => s+t.totalDS, 0);
-  const totalDPKH = dpkhByMonth.reduce((s,v) => s+v.dpkh, 0);
+  // ĐPKH Quý = unique KH
+  const totalDPKH = filtered.reduce((s,t) => s + t.distinctKhCount, 0);
   const datCount  = filtered.filter(t => t.datTarget).length;
   const tdvCount  = filtered.length;
 
@@ -852,7 +863,7 @@ function onQuyMienChange(selectedMien) {
   const ckDsByMonth    = ckMonthKeys.map(() => 0); // placeholder (not per-month from tdvRows)
   const ckDpkhByMonth  = ckMonthKeys.map(() => 0);
   const ckTotalDS      = filtered.reduce((s,t) => s+(t.ckDS||0), 0);
-  const ckTotalDPKH    = filtered.reduce((s,t) => s+(t.ckDPKH||0), 0);
+  const ckTotalDPKH    = filtered.reduce((s,t) => s+(t.ckDistinctKh||0), 0);
 
   // Recalculate QLBH from filtered set
   const filteredQlbhDsMap = {};
@@ -878,7 +889,7 @@ function onQuyMienChange(selectedMien) {
   if (!out) return;
 
   if (typeof Chart !== 'undefined') {
-    ['quy-chart-01','quy-chart-02','quy-chart-04'].forEach(id => {
+    ['quy-chart-01','quy-chart-04'].forEach(id => {
       const el = document.getElementById(id);
       if (el) { const ch = Chart.getChart(el); if (ch) ch.destroy(); }
     });
