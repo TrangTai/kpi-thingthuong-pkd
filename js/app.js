@@ -334,6 +334,7 @@ let _qData           = null; // quarterly data from DONHANG_6_THANG: {byTdvMonth
 let _qSpNhom         = null; // SP→Nhóm mapping: {maSP → nhomName}
 let _qDataCurrent    = null; // current quarter full order file (all 3 months, standalone)
 let _qDataCK         = null; // same-quarter previous year order data for comparison
+let _qTargets        = null; // targets from MAU_TARGET_QUY.xlsx [{maTDV, mien, dsTongTarget, ...}]
 
 function setupKhMoiUpload() {
   const inputDskh = document.getElementById('input-khmoi-dskh');
@@ -552,6 +553,22 @@ function setupQuarterlyUpload() {
       reader.readAsArrayBuffer(file);
     });
   }
+
+  const inpTgt = document.getElementById('input-quy-target');
+  if (inpTgt) {
+    inpTgt.addEventListener('change', e => {
+      const file = e.target.files[0]; if (!file) return;
+      document.getElementById('label-quy-target').textContent = file.name;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          _qTargets = parseTargetQuyFile(ev.target.result);
+          _updateQuyStatus();
+        } catch(err) { alert('Lỗi đọc Target Quý: ' + err.message); }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
 }
 
 function _updateQuyStatus() {
@@ -561,8 +578,9 @@ function _updateQuyStatus() {
     const months = Object.keys(_qDataCurrent.byMonth || {}).sort();
     parts.push(`${n} TDV · ${months.length} tháng`);
   }
-  if (_qDataCK) parts.push(`CK: ${Object.keys(_qDataCK.byTdv||{}).length} TDV`);
-  if (_qSpNhom)  parts.push(`Nhóm: ${Object.keys(_qSpNhom).length} SP`);
+  if (_qDataCK)   parts.push(`CK: ${Object.keys(_qDataCK.byTdv||{}).length} TDV`);
+  if (_qSpNhom)   parts.push(`Nhóm: ${Object.keys(_qSpNhom).length} SP`);
+  if (_qTargets)  parts.push(`Target: ${_qTargets.filter(t=>t.doiTuong!=='QLBH').length} TDV`);
   const el = document.getElementById('quy-status');
   if (el) el.textContent = parts.join(' · ');
 }
@@ -594,7 +612,8 @@ async function onQuarterlyCalculate() {
       if (t) dskhByTdv[t] = (dskhByTdv[t] || 0) + 1;
     });
 
-    const result = calculateQuarterlyReport(qData, currentOrders, _qSpNhom, staticData.targets || [], dskhByTdv, _qDataCK);
+    const targets = _qTargets || staticData.targets || [];
+    const result = calculateQuarterlyReport(qData, currentOrders, _qSpNhom, targets, dskhByTdv, _qDataCK);
     out.innerHTML = renderQuarterlyReport(result);
     setTimeout(() => initQuyCharts(), 80);
   } catch(err) {

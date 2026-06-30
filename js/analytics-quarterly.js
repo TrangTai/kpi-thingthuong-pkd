@@ -4,6 +4,48 @@
 
 const QUY_MIN_DS = 500000;
 
+// ─── Target Quý parser ───────────────────────────────────────
+// Format: MãTDV | TênTDV | KhuVực | Miền | QLBH | ĐốiTượng | DSTổngTarget | ĐPKHTarget | ĐPMHTarget
+function parseTargetQuyFile(arrayBuffer) {
+  const wb   = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false });
+  const ws   = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  if (rows.length < 2) return [];
+
+  const normH = rows[0].map(h => String(h||'').toLowerCase().replace(/\s+/g,'').replace(/đ/g,'d'));
+  const fi = (...ks) => { for (const k of ks) { const i = normH.findIndex(h => h.includes(k)); if (i>=0) return i; } return -1; };
+  const cMA  = fi('matdv', 'matdv');               if (cMA  < 0) throw new Error('Cần cột "Mã TDV"');
+  const cTEN = fi('tentdv', 'ten tdv');
+  const cKV  = fi('khuvuc', 'khu vuc');
+  const cMI  = fi('mien');
+  const cQL  = fi('qlbh');
+  const cDT  = fi('doituong', 'doi tuong');
+  const cDS  = fi('dstong', 'ds tong', 'doanhs', 'target');
+  const cDPKH = fi('dpkh');
+  const cDPMH = fi('dpmh');
+
+  const targets = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const maTDV = String(row[cMA] || '').trim().toUpperCase();
+    if (!maTDV) continue;
+    const cleanNum = c => parseFloat(String(row[c]||'0').replace(/[^0-9.-]/g,'')) || 0;
+    targets.push({
+      maTDV,
+      tenTDV:       String(row[cTEN >= 0 ? cTEN : 1] || '').trim(),
+      khuVuc:       String(row[cKV  >= 0 ? cKV  : 2] || '').trim(),
+      mien:         String(row[cMI  >= 0 ? cMI  : 3] || '').trim(),
+      qlbhCode:     String(row[cQL  >= 0 ? cQL  : 4] || '').trim(),
+      doiTuong:     String(row[cDT  >= 0 ? cDT  : 5] || '').trim().toUpperCase(),
+      dsTongTarget: cleanNum(cDS  >= 0 ? cDS  : 6),
+      dpkhTarget:   cleanNum(cDPKH >= 0 ? cDPKH : 7),
+      dpmhTarget:   cleanNum(cDPMH >= 0 ? cDPMH : 8),
+      isQuyTarget:  true,  // dsTongTarget là tổng quý, không nhân 3
+    });
+  }
+  return targets;
+}
+
 // ─── SP→Nhóm mapping parser ──────────────────────────────────
 function parseSpNhomFile(arrayBuffer) {
   const wb   = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false });
@@ -205,7 +247,7 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskh
       totalDS, totalDPKH, totalDPMH, mStats,
       distinctKhCount: distinctKhSet.size,  // KH unique đủ ĐK ≥1 tháng trong quý
       distinctSpCount: distinctSpSet.size,  // SP unique đủ ĐK ≥1 tháng trong quý
-      datTarget: (info.dsTongTarget||0) > 0 && totalDS >= (info.dsTongTarget||0) * 3,
+      datTarget: (info.dsTongTarget||0) > 0 && totalDS >= (info.isQuyTarget ? (info.dsTongTarget||0) : (info.dsTongTarget||0)*3),
       ckDS: 0, ckDPKH: 0,
     });
   });
@@ -282,7 +324,7 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskh
   });
   const qlbhPctRows = Object.entries(qlbhTeamDsMap).map(([code, ds]) => {
     const info = tgtMap[code] || {};
-    const target = (info.dsTongTarget || 0) * 3;
+    const target = info.isQuyTarget ? (info.dsTongTarget||0) : (info.dsTongTarget||0) * 3;
     return { code, tenTDV: info.tenTDV || code, ds, target, pct: target > 0 ? ds / target : 0 };
   }).filter(r => r.target > 0);
   const datQLBHCount = qlbhPctRows.filter(r => r.pct >= 1).length;
@@ -366,6 +408,7 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskh
     ckDsByMonth, ckDpkhByMonth, ckMonthKeys,
     ckNhomDsMap, ckNhomDpkhMap,
     _qData: qData,        // raw file data for filter recomputation
+    _ckData: ckData,      // CK file data for filter recomputation
     _spNhomMap: spNhomMap,
   };
 }
@@ -398,7 +441,7 @@ function renderQuarterlyReport(data) {
   const mienList = [...new Set(allTdvRowsForMien.map(t => t.mien).filter(Boolean))].sort();
   const mienFilterHtml = mienList.length > 1 ? `
     <div class="quy-mien-bar">
-      <label class="quy-mien-label">QLBH:</label>
+      <label class="quy-mien-label">Miền:</label>
       <select id="quy-mien-select" onchange="onQuyMienChange(this.value)" class="quy-mien-select">
         <option value="">Tất cả</option>
         ${mienList.map(m => `<option value="${m}">${m}</option>`).join('')}
@@ -874,9 +917,17 @@ function onQuyMienChange(selectedMien) {
   const tdvCount  = filtered.length;
 
   // CK aggregates from filtered TDVs
-  const ckMonthKeys   = _quyReport.ckMonthKeys || [];
-  const ckTotalDS     = filtered.reduce((s,t) => s+(t.ckDS||0), 0);
-  const ckTotalDPKH   = filtered.reduce((s,t) => s+(t.ckDistinctKh||0), 0);
+  const ckMonthKeys    = _quyReport.ckMonthKeys || [];
+  const ckTotalDS      = filtered.reduce((s,t) => s+(t.ckDS||0), 0);
+  const ckTotalDPKH    = filtered.reduce((s,t) => s+(t.ckDistinctKh||0), 0);
+  // Recompute CK monthly bars from filtered TDVs
+  const ckRawData      = _quyReport._ckData || {};
+  const ckByTdvMonthF  = ckRawData.byTdvMonth || {};
+  const ckDsByMonth    = ckMonthKeys.map(mk => filtered.reduce((s,t) => s+(ckByTdvMonthF[t.maTDV]?.[mk]?.ds||0), 0));
+  const ckDpkhByMonth  = ckMonthKeys.map(mk => filtered.reduce((s,t) => {
+    const khMap = ckByTdvMonthF[t.maTDV]?.[mk]?.khDsMap || {};
+    return s + Object.values(khMap).filter(v => v >= QUY_MIN_DS).length;
+  }, 0));
 
   // ── Recompute nhóm DS / nhóm ĐPKH / topSP từ TDVs đã lọc ──
   const rawData    = _quyReport._qData   || {};
@@ -914,6 +965,30 @@ function onQuyMienChange(selectedMien) {
   const nhomDpkhMap = Object.keys(filtNhomKhSets).length > 0
     ? Object.fromEntries(Object.entries(filtNhomKhSets).map(([nh,s]) => [nh, s.size]))
     : _quyReport.nhomDpkhMap;
+
+  // ── Recompute CK nhóm DS/ĐPKH từ filtered TDVs ──────────
+  const ckByTdvSPKhSetF = ckRawData.byTdvSPKhSet || {};
+  const filtCkNhomDsMap = {};
+  const filtCkNhomKhSets = {};
+  filtTdvSet.forEach(tdv => {
+    ckMonthKeys.forEach(mk => {
+      const spDsM = ckByTdvMonthF[tdv]?.[mk]?.spDsMap || {};
+      Object.entries(spDsM).forEach(([sp, ds]) => {
+        if (spNhomMap) { const nh = spNhomMap[sp]; if (nh) filtCkNhomDsMap[nh] = (filtCkNhomDsMap[nh]||0) + ds; }
+      });
+    });
+    if (spNhomMap) {
+      Object.entries(ckByTdvSPKhSetF[tdv] || {}).forEach(([sp, khSet]) => {
+        const nh = spNhomMap[sp]; if (!nh) return;
+        if (!filtCkNhomKhSets[nh]) filtCkNhomKhSets[nh] = new Set();
+        khSet.forEach(kh => filtCkNhomKhSets[nh].add(kh));
+      });
+    }
+  });
+  const ckNhomDsMap = Object.keys(filtCkNhomDsMap).length > 0 ? filtCkNhomDsMap : _quyReport.ckNhomDsMap;
+  const ckNhomDpkhMap = Object.keys(filtCkNhomKhSets).length > 0
+    ? Object.fromEntries(Object.entries(filtCkNhomKhSets).map(([nh,s]) => [nh, s.size]))
+    : _quyReport.ckNhomDpkhMap;
 
   // topSP từ filtered TDVs
   const rawByMaSP   = rawData.byMaSP || {};
@@ -956,9 +1031,9 @@ function onQuyMienChange(selectedMien) {
     totalDS, totalDPKH, datCount, tdvCount,
     datQLBHCount, qlbhCount,
     ckTotalDS, ckTotalDPKH,
-    ckDsByMonth: _quyReport.ckDsByMonth,
-    ckDpkhByMonth: _quyReport.ckDpkhByMonth,
+    ckDsByMonth, ckDpkhByMonth,
     nhomDsMap, nhomDpkhMap, topSP, leadNhom, leadPct,
+    ckNhomDsMap, ckNhomDpkhMap,
   });
   const out = document.getElementById('quy-output');
   if (!out) return;

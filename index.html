@@ -355,7 +355,13 @@
       <span class="file-badge">SP_NHOM.xlsx</span>
     </label>
     <input type="file" id="input-sp-nhom" accept=".xlsx,.xls" style="display:none">
-    <span id="label-sp-nhom" style="font-size:12px;color:#555;margin-right:10px">Mapping Mã SP → Nhóm (tuỳ chọn)</span>
+    <span id="label-sp-nhom" style="font-size:12px;color:#555;margin-right:10px">Mapping SP → Nhóm (tuỳ chọn)</span>
+    <label class="upload-label" for="input-quy-target">
+      <span class="upload-icon">🎯</span>
+      <span class="file-badge">TARGET_QUY.xlsx</span>
+    </label>
+    <input type="file" id="input-quy-target" accept=".xlsx,.xls" style="display:none">
+    <span id="label-quy-target" style="font-size:12px;color:#555;margin-right:10px">Target + Miền TDV (tuỳ chọn)</span>
     <button id="btn-quy-calc" onclick="onQuarterlyCalculate()">📅 Tạo Báo Cáo Quý</button>
     <span id="quy-status" style="font-size:12px;color:#888;margin-left:8px"></span>
   </div>
@@ -406,9 +412,9 @@
 <script src="js/analytics-mien.js"></script>
 <script src="js/analytics-checkin.js?v=6"></script>
 <script src="js/analytics-kh-moi.js?v=3"></script>
-<script src="js/analytics-quarterly.js?v=8"></script>
+<script src="js/analytics-quarterly.js?v=9"></script>
 <script src="js/kpi-card.js"></script>
-<script src="js/app.js?v=6"></script>
+<script src="js/app.js?v=7"></script>
 
 </div><!-- end app-main -->
 </body>
