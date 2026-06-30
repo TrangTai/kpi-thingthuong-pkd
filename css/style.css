@@ -1535,6 +1535,14 @@ th[title]:not([title=""]) { cursor: help; }
 .quy-topsp-ds   { width: 80px; text-align: right; padding: 10px 12px; font-weight: 700; color: #003D77; }
 .quy-topsp-bar  { width: 160px; padding: 10px 12px; }
 .quy-topsp-pct  { width: 48px; text-align: right; padding: 10px 12px; color: #00BCD4; font-weight: 600; }
+.quy-topsp-ck   { width: 72px; text-align: right; padding: 10px 12px; color: #7A8DA8; font-size: 11px; }
+
+/* Cùng kỳ / tăng trưởng */
+.quy-grow-up    { color: #007A3D; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.quy-grow-down  { color: #C0392B; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.quy-ck-badge   { font-size: 11px; color: #7A8DA8; display: inline-block; }
+.quy-ck-col     { text-align: right; padding: 6px 10px; color: #7A8DA8; font-size: 11px; white-space: nowrap; }
+.quy-legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
 
 @media (max-width: 768px) {
   .quy-kpi-grid      { grid-template-columns: 1fr 1fr; }
