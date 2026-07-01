@@ -485,21 +485,20 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskh
     tdvKhMonthBuckets[r.maTDV] = b;
   });
 
-  // ── KH nguy cơ mất: mua T1 hoặc T2, không mua T3 (mục 14) ─
-  const khInfoMap = qData?.khInfoMap || {};
+  // ── KH chỉ mua T1, không mua T2 và T3 (mục 14) ─────────
   const [mk0, mk1, mk2] = qMonthKeys;
-  const atRiskKhList = [];
+  const atRiskByTdv = {}; // {maTDV: count}
   tdvRows.forEach(r => {
     const khT1 = h6ByTdv[r.maTDV]?.[mk0]?.khDsMap || {};
     const khT2 = h6ByTdv[r.maTDV]?.[mk1]?.khDsMap || {};
     const khT3 = h6ByTdv[r.maTDV]?.[mk2]?.khDsMap || {};
-    const t12  = new Set([...Object.keys(khT1).filter(k=>khT1[k]>0), ...Object.keys(khT2).filter(k=>khT2[k]>0)]);
-    t12.forEach(kh => {
-      if (!khT3[kh] || khT3[kh] === 0)
-        atRiskKhList.push({ maTDV: r.maTDV, tenTDV: r.tenTDV, maKH: kh, tenKH: khInfoMap[kh]||kh, dsT1: khT1[kh]||0, dsT2: khT2[kh]||0 });
+    let count = 0;
+    Object.keys(khT1).forEach(kh => {
+      if ((khT1[kh]||0) > 0 && (!khT2[kh] || khT2[kh] === 0) && (!khT3[kh] || khT3[kh] === 0))
+        count++;
     });
+    atRiskByTdv[r.maTDV] = count;
   });
-  atRiskKhList.sort((a,b) => (b.dsT1+b.dsT2)-(a.dsT1+a.dsT2));
 
   // ── HĐ stats per TDV (mục 15 & 16) ──────────────────────
   const hdByTdvYear = hdData?.byTdvYear || {};
@@ -524,7 +523,7 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskh
     _ckData: ckData,      // CK file data for filter recomputation
     _spNhomMap: spNhomMap,
     _hdData: hdData,
-    tdvNhomDsMap, tdvKhSpBuckets, tdvKhMonthBuckets, atRiskKhList, hdStatsMap,
+    tdvNhomDsMap, tdvKhSpBuckets, tdvKhMonthBuckets, atRiskByTdv, hdStatsMap,
   };
 }
 
@@ -538,7 +537,7 @@ function renderQuarterlyReport(data) {
     hasCK, ckTotalDS, ckTotalDPKH, ckDsByMonth, ckDpkhByMonth,
     ckNhomDsMap, ckNhomDpkhMap,
     tdvNhomDsMap = {}, tdvKhSpBuckets = {}, tdvKhMonthBuckets = {},
-    atRiskKhList = [], hdStatsMap = {},
+    atRiskByTdv = {}, hdStatsMap = {},
   } = data;
 
   const vndM  = v => Math.round(v/1e6).toLocaleString('vi-VN') + 'M';
@@ -653,30 +652,6 @@ function renderQuarterlyReport(data) {
     <div class="quy-chart-title">03 · % ĐẠT DOANH SỐ QUÝ THEO TDV</div>
     ${buildDsTgtTable()}
   </div>` : ''}
-  ${(() => {
-    // Mục 13 — Tần suất KH per TDV
-    const lbl1 = qMonthLabels[0]||'T1', lbl2 = qMonthLabels[1]||'T2', lbl3 = qMonthLabels[2]||'T3';
-    const rows13 = tdvRows.map(t => {
-      const b = tdvKhMonthBuckets[t.maTDV] || {1:0,2:0,3:0};
-      const tot = b[1]+b[2]+b[3];
-      const cell = (n,bg) => `<td style="text-align:center;background:${bg};font-weight:${n>0?'700':'400'}">${n}${tot>0?`<br><span style="font-size:10px;font-weight:400;color:#555">${Math.round(n/tot*100)}%</span>`:''}</td>`;
-      return `<tr><td>${t.tenTDV}</td>${cell(b[1],'#FFEBEE')}${cell(b[2],'#FFF9C4')}${cell(b[3],'#E8F5E9')}<td style="text-align:center">${tot}</td></tr>`;
-    });
-    const tot1=tdvRows.reduce((s,t)=>{const b=tdvKhMonthBuckets[t.maTDV]||{};return s+(b[1]||0);},0);
-    const tot2=tdvRows.reduce((s,t)=>{const b=tdvKhMonthBuckets[t.maTDV]||{};return s+(b[2]||0);},0);
-    const tot3=tdvRows.reduce((s,t)=>{const b=tdvKhMonthBuckets[t.maTDV]||{};return s+(b[3]||0);},0);
-    return `<div class="quy-chart-card" style="margin-top:12px">
-      <div class="quy-chart-title">13 · TẦN SUẤT KHÁCH HÀNG MUA TRONG QUÝ THEO TDV<span class="quy-chart-unit">Số KH có đơn hàng (DS > 0) trong N tháng</span></div>
-      <table class="quy-tbl"><thead><tr><th>Tên TDV</th><th style="text-align:center;background:#FFEBEE">Chỉ ${lbl1}</th><th style="text-align:center;background:#FFF9C4">2 Tháng</th><th style="text-align:center;background:#E8F5E9">3 Tháng</th><th style="text-align:center">Tổng KH</th></tr></thead>
-      <tbody>${rows13.join('')}<tr class="quy-tbl-total"><td>Tổng</td><td style="text-align:center;background:#FFEBEE;font-weight:700">${tot1}</td><td style="text-align:center;background:#FFF9C4;font-weight:700">${tot2}</td><td style="text-align:center;background:#E8F5E9;font-weight:700">${tot3}</td><td style="text-align:center;font-weight:700">${tot1+tot2+tot3}</td></tr></tbody></table>
-    </div>`;
-  })()}
-  ${atRiskKhList.length > 0 ? `<div class="quy-chart-card" style="margin-top:12px">
-    <div class="quy-chart-title">14 · KHÁCH HÀNG NGUY CƠ MẤT<span class="quy-chart-unit">Có mua ${qMonthLabels[0]||'T1'} hoặc ${qMonthLabels[1]||'T2'} nhưng không mua ${qMonthLabels[2]||'T3'} · Sắp xếp theo DS giảm dần</span></div>
-    <table class="quy-tbl"><thead><tr><th>#</th><th>Mã KH</th><th>Tên KH</th><th>TDV</th><th style="text-align:right">DS ${qMonthLabels[0]||'T1'}</th><th style="text-align:right">DS ${qMonthLabels[1]||'T2'}</th></tr></thead>
-    <tbody>${atRiskKhList.map((r,i)=>`<tr><td class="quy-topsp-num">${i+1}</td><td style="font-size:11px;color:#888">${r.maKH}</td><td>${r.tenKH}</td><td style="font-size:11px">${r.tenTDV}</td><td style="text-align:right">${r.dsT1?vndM(r.dsT1):'—'}</td><td style="text-align:right">${r.dsT2?vndM(r.dsT2):'—'}</td></tr>`).join('')}</tbody>
-    </table>
-  </div>` : ''}
 </div>`;
 
   // ── Section II: Khách hàng ───────────────────────────────
@@ -763,6 +738,44 @@ function renderQuarterlyReport(data) {
       ${buildDpkhTable06()}
     </div>
   </div>
+  ${(() => {
+    // Mục 13 — Tần suất KH per TDV
+    const rows13 = tdvRows.map(t => {
+      const b = tdvKhMonthBuckets[t.maTDV] || {1:0,2:0,3:0};
+      const tot = b[1]+b[2]+b[3];
+      const cell = (n,bg) => `<td style="text-align:center;background:${bg};font-weight:${n>0?'700':'400'}">${n}${tot>0?`<br><span style="font-size:10px;font-weight:400;color:#555">${Math.round(n/tot*100)}%</span>`:''}</td>`;
+      return `<tr><td>${t.tenTDV}</td>${cell(b[1],'#FFEBEE')}${cell(b[2],'#FFF9C4')}${cell(b[3],'#E8F5E9')}<td style="text-align:center">${tot}</td></tr>`;
+    });
+    const tot1=tdvRows.reduce((s,t)=>{const b=tdvKhMonthBuckets[t.maTDV]||{};return s+(b[1]||0);},0);
+    const tot2=tdvRows.reduce((s,t)=>{const b=tdvKhMonthBuckets[t.maTDV]||{};return s+(b[2]||0);},0);
+    const tot3=tdvRows.reduce((s,t)=>{const b=tdvKhMonthBuckets[t.maTDV]||{};return s+(b[3]||0);},0);
+    return `<div class="quy-chart-card" style="margin-top:12px">
+      <div class="quy-chart-title">13 · TẦN SUẤT KHÁCH HÀNG MUA TRONG QUÝ THEO TDV<span class="quy-chart-unit">Số KH có đơn hàng (DS > 0) trong N tháng</span></div>
+      <table class="quy-tbl"><thead><tr><th>Tên TDV</th><th style="text-align:center;background:#FFEBEE">1 Tháng</th><th style="text-align:center;background:#FFF9C4">2 Tháng</th><th style="text-align:center;background:#E8F5E9">3 Tháng</th><th style="text-align:center">Tổng KH</th></tr></thead>
+      <tbody>${rows13.join('')}<tr class="quy-tbl-total"><td>Tổng</td><td style="text-align:center;background:#FFEBEE;font-weight:700">${tot1}</td><td style="text-align:center;background:#FFF9C4;font-weight:700">${tot2}</td><td style="text-align:center;background:#E8F5E9;font-weight:700">${tot3}</td><td style="text-align:center;font-weight:700">${tot1+tot2+tot3}</td></tr></tbody></table>
+    </div>`;
+  })()}
+  ${(() => {
+    // Mục 14 — KH chỉ mua T1, không mua T2 và T3
+    const hasMuc14 = tdvRows.some(t => (atRiskByTdv[t.maTDV]||0) > 0);
+    if (!hasMuc14) return '';
+    const sorted14 = [...tdvRows].filter(t => (atRiskByTdv[t.maTDV]||0) > 0).sort((a,b) => (atRiskByTdv[b.maTDV]||0) - (atRiskByTdv[a.maTDV]||0));
+    const max14 = Math.max(...sorted14.map(t => atRiskByTdv[t.maTDV]||0), 1);
+    const tot14 = sorted14.reduce((s,t) => s+(atRiskByTdv[t.maTDV]||0), 0);
+    const bar14Html = sorted14.map(t => {
+      const cnt = atRiskByTdv[t.maTDV]||0;
+      const w = Math.round(cnt/max14*100);
+      return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f0f4f8">
+        <span style="min-width:110px;max-width:110px;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.tenTDV}</span>
+        <div style="flex:1;background:#EEF2F7;border-radius:3px;height:14px"><div style="width:${w}%;height:100%;background:#EF5350;border-radius:3px"></div></div>
+        <span style="min-width:40px;font-size:11px;font-weight:700;color:#EF5350;text-align:right">${cnt} KH</span>
+      </div>`;
+    }).join('');
+    return `<div class="quy-chart-card" style="margin-top:12px">
+      <div class="quy-chart-title">14 · KH CHỈ MUA ${qMonthLabels[0]||'T1'} CHƯA LẤY LẠI<span class="quy-chart-unit">Có đơn ${qMonthLabels[0]||'T1'}, không có đơn ${qMonthLabels[1]||'T2'} và ${qMonthLabels[2]||'T3'} · Tổng: ${tot14} KH</span></div>
+      <div style="padding:4px 0">${bar14Html}</div>
+    </div>`;
+  })()}
 </div>`;
 
   // ── Section III: Sản phẩm ────────────────────────────────
@@ -1303,7 +1316,7 @@ function onQuyMienChange(selectedMien) {
     tdvNhomDsMap:     _quyReport.tdvNhomDsMap     || {},
     tdvKhSpBuckets:   _quyReport.tdvKhSpBuckets   || {},
     tdvKhMonthBuckets:_quyReport.tdvKhMonthBuckets|| {},
-    atRiskKhList: (_quyReport.atRiskKhList||[]).filter(r => filtTdvSet.has(r.maTDV)),
+    atRiskByTdv: Object.fromEntries(Object.entries(_quyReport.atRiskByTdv||{}).filter(([tdv]) => filtTdvSet.has(tdv))),
     hdStatsMap:       _quyReport.hdStatsMap        || {},
   });
   const out = document.getElementById('quy-output');
