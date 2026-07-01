@@ -1025,13 +1025,12 @@ function renderQuarterlyReport(data) {
     const hasNhom11 = Object.keys(tdvNhomDsMap).length > 0;
     if (!hasNhom11) return '';
     const allNhoms = [...new Set(Object.values(tdvNhomDsMap).flatMap(m => Object.keys(m)))].sort((a,b) => a==='BÁN PHỦ HẾT'?1:b==='BÁN PHỦ HẾT'?-1:a.localeCompare(b,'vi'));
-    const heatBg11 = pct => pct>=40?'#1565C0':pct>=20?'#42A5F5':pct>=10?'#BBDEFB':pct>0?'#E3F2FD':'#f8f8f8';
-    const heatFg11 = pct => pct>=40?'#fff':'#1a1a1a';
     const ckBadge11 = (cur, ck) => {
       if (!hasCK || ck === 0) return '';
       const d = cur - ck;
       const cls = d >= 0 ? 'quy-grow-up' : 'quy-grow-down';
-      return `<br><span class="${cls}" style="font-size:9px">${d>=0?'+':''}${d.toFixed(0)}pp</span>`;
+      const arrow = d >= 0 ? '▲' : '▼';
+      return `<br><span class="${cls}" style="font-size:10px">${arrow} ${Math.abs(d).toFixed(0)}pp</span>`;
     };
     const rows11 = tdvRows.map(t => {
       const nhomDs   = tdvNhomDsMap[t.maTDV] || {};
@@ -1042,7 +1041,7 @@ function renderQuarterlyReport(data) {
         const ds    = nhomDs[nh] || 0;
         const pct   = tdvTot   > 0 ? Math.round(ds/tdvTot*100) : 0;
         const ckPct = ckTdvTot > 0 ? Math.round((ckNhomDs[nh]||0)/ckTdvTot*100) : 0;
-        return `<td style="text-align:center;background:${heatBg11(pct)};color:${heatFg11(pct)};font-weight:${pct>=10?'700':'400'}">${pct>0?pct+'%':'—'}${ckBadge11(pct,ckPct)}</td>`;
+        return `<td style="text-align:center;font-weight:${pct>=10?'700':'400'}">${pct>0?pct+'%':'—'}${ckBadge11(pct,ckPct)}</td>`;
       });
       return `<tr><td>${t.tenTDV}</td>${cells.join('')}</tr>`;
     });
@@ -1103,42 +1102,40 @@ function renderQuarterlyReport(data) {
     if (!has12) return '';
     const bucketKeys12   = [1, 2, '3-4', '5-9', '10+'];
     const bucketLabels12 = ['1 SP','2 SP','3–4 SP','5–9 SP','10+ SP'];
-    const ckBadge12 = (cur, ck) => {
+    const ckArrow12 = (cur, ck) => {
       if (!hasCK || !ck) return '';
-      const pct = (cur - ck) / ck * 100;
-      const cls = pct >= 0 ? 'quy-grow-up' : 'quy-grow-down';
-      return `<span class="${cls}" style="font-size:9px;margin-left:3px">${pct>=0?'+':''}${pct.toFixed(0)}%</span>`;
+      const d = (cur - ck) / ck * 100;
+      const cls = d >= 0 ? 'quy-grow-up' : 'quy-grow-down';
+      return `<span class="${cls}" style="font-size:10px;display:block">${d>=0?'▲':'▼'} ${Math.abs(d).toFixed(0)}%</span>`;
     };
     const rows12 = tdvRows.map(t => {
       const b   = tdvKhSpBuckets[t.maTDV] || {};
       const tot = bucketKeys12.reduce((s,k)=>s+(b[k]||0),0);
-      const mx  = Math.max(...bucketKeys12.map(k => b[k]||0), 1);
       const ckB   = ckTdvKhSpBuckets[t.maTDV] || {};
       const ckTot = hasCK ? bucketKeys12.reduce((s,k)=>s+(ckB[k]||0),0) : 0;
       const cells = bucketKeys12.map(k => {
-        const n = b[k]||0;
-        const intensity = Math.round(n/mx*100);
-        const bg = intensity>=80?'#1B5E20':intensity>=60?'#388E3C':intensity>=40?'#66BB6A':intensity>=20?'#C8E6C9':'#f8f8f8';
-        const fg = intensity>=60?'#fff':'#1a1a1a';
-        const pctStr = tot > 0 ? `<br><span style="font-size:10px;font-weight:400">${Math.round(n/tot*100)}%</span>` : '';
-        return `<td style="text-align:center;background:${bg};color:${fg};font-weight:${n>0?'700':'400'}">${n||'—'}${pctStr}</td>`;
+        const n      = b[k]||0;
+        const pctStr = tot > 0 ? `<span style="font-size:10px;color:#888;display:block">${Math.round(n/tot*100)}%</span>` : '';
+        return `<td style="text-align:center;font-weight:${n>0?'700':'400'}">${n||'—'}${pctStr}${ckArrow12(n, ckB[k]||0)}</td>`;
       });
-      return `<tr><td>${t.tenTDV}</td>${cells.join('')}<td style="text-align:center">${tot}${ckBadge12(tot,ckTot)}</td></tr>`;
+      return `<tr><td>${t.tenTDV}</td>${cells.join('')}<td style="text-align:center">${tot}${ckArrow12(tot,ckTot)}</td></tr>`;
     });
     // Dòng Tổng
     const totBuckets12 = {};
     bucketKeys12.forEach(k => { totBuckets12[k] = tdvRows.reduce((s,t)=>s+(tdvKhSpBuckets[t.maTDV]?.[k]||0),0); });
-    const grandTot12 = bucketKeys12.reduce((s,k)=>s+totBuckets12[k],0);
-    const ckGrandTot12 = hasCK ? tdvRows.reduce((s,t)=>{const b=ckTdvKhSpBuckets[t.maTDV]||{};return s+bucketKeys12.reduce((ss,k)=>ss+(b[k]||0),0);},0) : 0;
-    const totCells12 = bucketKeys12.map(k => {
-      const n = totBuckets12[k];
-      const pctStr = grandTot12 > 0 ? `<br><span style="font-size:10px;font-weight:400">${Math.round(n/grandTot12*100)}%</span>` : '';
-      return `<td style="text-align:center;font-weight:700">${n}${pctStr}</td>`;
+    const grandTot12  = bucketKeys12.reduce((s,k)=>s+totBuckets12[k],0);
+    const ckBuckets12 = {};
+    bucketKeys12.forEach(k => { ckBuckets12[k] = hasCK ? tdvRows.reduce((s,t)=>s+(ckTdvKhSpBuckets[t.maTDV]?.[k]||0),0) : 0; });
+    const ckGrandTot12 = bucketKeys12.reduce((s,k)=>s+ckBuckets12[k],0);
+    const totCells12  = bucketKeys12.map(k => {
+      const n      = totBuckets12[k];
+      const pctStr = grandTot12 > 0 ? `<span style="font-size:10px;font-weight:400;display:block">${Math.round(n/grandTot12*100)}%</span>` : '';
+      return `<td style="text-align:center;font-weight:700">${n}${pctStr}${ckArrow12(n, ckBuckets12[k])}</td>`;
     });
     const hdrs12 = bucketLabels12.map(l=>`<th style="text-align:center">${l}</th>`).join('');
     return `<div class="quy-chart-card" style="margin-top:12px">
       <div class="quy-chart-title">12 · ĐỘ PHỦ MẶT HÀNG PER KHÁCH HÀNG THEO TDV<span class="quy-chart-unit">Số KH mua N sản phẩm unique trong cả quý</span></div>
-      <table class="quy-tbl"><thead><tr><th>Tên TDV</th>${hdrs12}<th style="text-align:center">Tổng KH</th></tr></thead><tbody>${rows12.join('')}<tr class="quy-tbl-total"><td>Tổng</td>${totCells12.join('')}<td style="text-align:center;font-weight:700">${grandTot12}${ckBadge12(grandTot12,ckGrandTot12)}</td></tr></tbody></table>
+      <table class="quy-tbl"><thead><tr><th>Tên TDV</th>${hdrs12}<th style="text-align:center">Tổng KH</th></tr></thead><tbody>${rows12.join('')}<tr class="quy-tbl-total"><td>Tổng</td>${totCells12.join('')}<td style="text-align:center;font-weight:700">${grandTot12}${ckArrow12(grandTot12,ckGrandTot12)}</td></tr></tbody></table>
     </div>`;
   })()}
 </div>`;
