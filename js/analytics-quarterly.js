@@ -119,9 +119,17 @@ function parseQuyOrderFileCK(arrayBuffer) {
         dt = new Date(Math.round((dv - 25569) * 86400 * 1000));
       } else if (dv instanceof Date) {
         dt = dv;
+      } else if (typeof dv === 'string') {
+        // Handle dd/MM/yyyy or dd-MM-yyyy or yyyy-MM-dd
+        const m1 = dv.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+        const m2 = dv.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+        if (m1) dt = new Date(+m1[3], +m1[2]-1, +m1[1]);
+        else if (m2) dt = new Date(+m2[1], +m2[2]-1, +m2[3]);
       }
       if (dt && !isNaN(dt)) {
-        monthKey = `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}`;
+        const y = dt instanceof Date && typeof dv === 'string' ? dt.getFullYear() : dt.getUTCFullYear();
+        const mo = dt instanceof Date && typeof dv === 'string' ? dt.getMonth()+1 : dt.getUTCMonth()+1;
+        monthKey = `${y}-${String(mo).padStart(2,'0')}`;
       }
     }
 
@@ -168,15 +176,27 @@ function parseQuyOrderFileCK(arrayBuffer) {
 let _quyReport = null;
 
 function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskhByTdv, ckData) {
-  const today    = new Date();
-  const curYear  = today.getFullYear();
-  const curMonth = today.getMonth() + 1;
-  const q        = Math.ceil(curMonth / 3);
-  const m1 = (q-1)*3+1, m2 = (q-1)*3+2, m3 = curMonth;
+  const today = new Date();
+  const ROMAN = ['I','II','III','IV'];
+
+  // Auto-detect reporting quarter from uploaded file months (fallback to today)
+  const dataMonthKeys = Object.keys(qData?.byMonth || {})
+    .filter(k => /^\d{4}-\d{2}$/.test(k)).sort();
+  let curYear, q, m1, m2, m3;
+  if (dataMonthKeys.length > 0) {
+    const [dy, dm] = dataMonthKeys[dataMonthKeys.length - 1].split('-').map(Number);
+    curYear = dy;
+    q  = Math.ceil(dm / 3);
+    m1 = (q-1)*3+1; m2 = (q-1)*3+2; m3 = (q-1)*3+3;
+  } else {
+    curYear = today.getFullYear();
+    const curMonth = today.getMonth() + 1;
+    q  = Math.ceil(curMonth / 3);
+    m1 = (q-1)*3+1; m2 = (q-1)*3+2; m3 = curMonth;
+  }
   const mkFmt    = m => `${curYear}-${String(m).padStart(2,'0')}`;
   const qMonthKeys = [mkFmt(m1), mkFmt(m2), mkFmt(m3)];
   const qMonthLabels = [`Tháng ${m1}`, `Tháng ${m2}`, `Tháng ${m3}`];
-  const ROMAN    = ['I','II','III','IV'];
 
   // Target map (non-QLBH only)
   const tgtMap = {};
