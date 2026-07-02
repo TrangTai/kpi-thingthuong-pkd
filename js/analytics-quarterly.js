@@ -184,8 +184,10 @@ function parseHopDongFile(arrayBuffer) {
   const wb   = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false });
   const ws   = wb.Sheets[wb.SheetNames[0]];
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-  if (rows.length < 2) return { byTdvYear: {} };
-  const byTdvYear = {}; // {maTDV: {year: Set<maKH>}}
+  if (rows.length < 2) return { byTdvYear: {}, byTdvKhSet: {}, allKhSet: new Set() };
+  const byTdvYear  = {}; // {maTDV: {year: Set<maKH>}}
+  const byTdvKhSet = {}; // {maTDV: Set<maKH>} all years
+  const allKhSet   = new Set();
   for (let i = 1; i < rows.length; i++) {
     const row   = rows[i];
     const year  = parseInt(row[0]) || 0;
@@ -195,14 +197,17 @@ function parseHopDongFile(arrayBuffer) {
     if (!byTdvYear[maTDV]) byTdvYear[maTDV] = {};
     if (!byTdvYear[maTDV][year]) byTdvYear[maTDV][year] = new Set();
     byTdvYear[maTDV][year].add(maKH);
+    if (!byTdvKhSet[maTDV]) byTdvKhSet[maTDV] = new Set();
+    byTdvKhSet[maTDV].add(maKH);
+    allKhSet.add(maKH);
   }
-  return { byTdvYear };
+  return { byTdvYear, byTdvKhSet, allKhSet };
 }
 
 // ─── Calculator ──────────────────────────────────────────────
 let _quyReport = null;
 
-function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskhByTdv, ckData, hdData) {
+function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskhByTdv, ckData, hdData, hdCkData) {
   const today = new Date();
   const ROMAN = ['I','II','III','IV'];
 
@@ -590,6 +595,22 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskh
     hdStatsMap[tdv.toUpperCase()] = yearMap[curYear]?.size || 0;
   });
 
+  // ── HĐ so sánh cùng kỳ (mục 21 & 22) ───────────────────
+  const hdHtByTdvKhSet = hdData?.byTdvKhSet || {};
+  const hdCkAllKhSet   = hdCkData?.allKhSet || new Set();
+  const hdCkByTdvKhSet = hdCkData?.byTdvKhSet || {};
+  const hdCompareMap   = {}; // {maTDV: {ht, ck, delta, taiKy, moi}}
+  tdvRows.forEach(r => {
+    const htSet = hdHtByTdvKhSet[r.maTDV] || new Set();
+    const ckSet = hdCkByTdvKhSet[r.maTDV] || new Set();
+    let taiKy = 0, moi = 0;
+    htSet.forEach(kh => {
+      if (hdCkAllKhSet.has(kh)) taiKy++;
+      else moi++;
+    });
+    hdCompareMap[r.maTDV] = { ht: htSet.size, ck: ckSet.size, delta: htSet.size - ckSet.size, taiKy, moi };
+  });
+
   return {
     qLabel: `Quý ${ROMAN[q-1]}`, qYear: curYear,
     qPeriod: `Tháng ${m1} – Tháng ${m3} · Năm ${curYear}`,
@@ -606,8 +627,10 @@ function calculateQuarterlyReport(qData, currentOrders, spNhomMap, targets, dskh
     _ckData: ckData,      // CK file data for filter recomputation
     _spNhomMap: spNhomMap,
     _hdData: hdData,
+    _hdCkData: hdCkData,
     tdvNhomDsMap, tdvKhSpBuckets, tdvKhMonthBuckets, atRiskByTdv, hdStatsMap,
     ckTdvNhomDsMap, ckTdvKhSpBuckets, ckTdvKhMonthBuckets, tdvKhDsBuckets,
+    hdCompareMap,
   };
 }
 
@@ -623,7 +646,7 @@ function renderQuarterlyReport(data) {
     tdvNhomDsMap = {}, tdvKhSpBuckets = {}, tdvKhMonthBuckets = {},
     atRiskByTdv = {}, hdStatsMap = {},
     ckTdvNhomDsMap = {}, ckTdvKhSpBuckets = {}, ckTdvKhMonthBuckets = {},
-    tdvKhDsBuckets = {},
+    tdvKhDsBuckets = {}, hdCompareMap = {},
   } = data;
 
   const vndM  = v => Math.round(v/1e6).toLocaleString('vi-VN') + 'M';
@@ -838,7 +861,7 @@ function renderQuarterlyReport(data) {
       const ckB   = ckTdvKhMonthBuckets[t.maTDV] || {1:0,2:0,3:0};
       const ckTot = ckB[1]+ckB[2]+ckB[3];
       const cell = (n,bg) => `<td style="text-align:center;background:${bg};font-weight:${n>0?'700':'400'}">${n}${tot>0?`<br><span style="font-size:10px;font-weight:400;color:#555">${Math.round(n/tot*100)}%</span>`:''}</td>`;
-      return `<tr><td>${t.tenTDV}</td>${cell(b[1],'#FFEBEE')}${cell(b[2],'#FFF9C4')}${cell(b[3],'#E8F5E9')}<td style="text-align:center">${tot}${ck13Badge(tot,ckTot)}</td></tr>`;
+      return `<tr><td>${t.tenTDV}</td>${cell(b[1],'#FFEBEE')}${cell(b[2],'#FFF9C4')}${cell(b[3],'#E8F5E9')}<td style="text-align:center">${tot}</td></tr>`;
     });
     const tot1=tdvRows.reduce((s,t)=>{const b=tdvKhMonthBuckets[t.maTDV]||{};return s+(b[1]||0);},0);
     const tot2=tdvRows.reduce((s,t)=>{const b=tdvKhMonthBuckets[t.maTDV]||{};return s+(b[2]||0);},0);
@@ -850,7 +873,7 @@ function renderQuarterlyReport(data) {
     return `<div class="quy-chart-card" style="margin-top:12px">
       <div class="quy-chart-title">13 · TẦN SUẤT KHÁCH HÀNG MUA TRONG QUÝ THEO TDV<span class="quy-chart-unit">Số KH có đơn hàng (DS > 0) trong N tháng</span></div>
       <table class="quy-tbl"><thead><tr><th>Tên TDV</th><th style="text-align:center;background:#FFEBEE">1 Tháng</th><th style="text-align:center;background:#FFF9C4">2 Tháng</th><th style="text-align:center;background:#E8F5E9">3 Tháng</th><th style="text-align:center">Tổng KH</th></tr></thead>
-      <tbody>${rows13.join('')}<tr class="quy-tbl-total"><td>Tổng</td><td style="text-align:center;background:#FFEBEE;font-weight:700">${tot1}${ck13Badge(tot1,ck1)}</td><td style="text-align:center;background:#FFF9C4;font-weight:700">${tot2}${ck13Badge(tot2,ck2)}</td><td style="text-align:center;background:#E8F5E9;font-weight:700">${tot3}${ck13Badge(tot3,ck3)}</td><td style="text-align:center;font-weight:700">${totAll13}${ck13Badge(totAll13,ckAll13)}</td></tr></tbody></table>
+      <tbody>${rows13.join('')}<tr class="quy-tbl-total"><td>Tổng</td><td style="text-align:center;background:#FFEBEE;font-weight:700">${tot1}${ck13Badge(tot1,ck1)}</td><td style="text-align:center;background:#FFF9C4;font-weight:700">${tot2}${ck13Badge(tot2,ck2)}</td><td style="text-align:center;background:#E8F5E9;font-weight:700">${tot3}${ck13Badge(tot3,ck3)}</td><td style="text-align:center;font-weight:700">${totAll13}</td></tr></tbody></table>
     </div>`;
   })()}
   ${(() => {
@@ -1028,9 +1051,8 @@ function renderQuarterlyReport(data) {
     const ckBadge11 = (cur, ck) => {
       if (!hasCK || ck === 0) return '';
       const d = cur - ck;
-      const cls = d >= 0 ? 'quy-grow-up' : 'quy-grow-down';
-      const arrow = d >= 0 ? '▲' : '▼';
-      return `<br><span class="${cls}" style="font-size:10px">${arrow} ${Math.abs(d).toFixed(0)}pp</span>`;
+      const sign = d >= 0 ? '+' : '';
+      return ` <span style="font-size:10px;color:#888">(${sign}${d.toFixed(0)})</span>`;
     };
     const rows11 = tdvRows.map(t => {
       const nhomDs   = tdvNhomDsMap[t.maTDV] || {};
@@ -1118,7 +1140,7 @@ function renderQuarterlyReport(data) {
         const pctStr = tot > 0 ? `<span style="font-size:10px;color:#888;display:block">${Math.round(n/tot*100)}%</span>` : '';
         return `<td style="text-align:center;font-weight:${n>0?'700':'400'}">${n||'—'}${pctStr}${ckArrow12(n, ckB[k]||0)}</td>`;
       });
-      return `<tr><td>${t.tenTDV}</td>${cells.join('')}<td style="text-align:center">${tot}${ckArrow12(tot,ckTot)}</td></tr>`;
+      return `<tr><td>${t.tenTDV}</td>${cells.join('')}<td style="text-align:center">${tot}</td></tr>`;
     });
     // Dòng Tổng
     const totBuckets12 = {};
@@ -1135,7 +1157,7 @@ function renderQuarterlyReport(data) {
     const hdrs12 = bucketLabels12.map(l=>`<th style="text-align:center">${l}</th>`).join('');
     return `<div class="quy-chart-card" style="margin-top:12px">
       <div class="quy-chart-title">12 · ĐỘ PHỦ MẶT HÀNG PER KHÁCH HÀNG THEO TDV<span class="quy-chart-unit">Số KH mua N sản phẩm unique trong cả quý</span></div>
-      <table class="quy-tbl"><thead><tr><th>Tên TDV</th>${hdrs12}<th style="text-align:center">Tổng KH</th></tr></thead><tbody>${rows12.join('')}<tr class="quy-tbl-total"><td>Tổng</td>${totCells12.join('')}<td style="text-align:center;font-weight:700">${grandTot12}${ckArrow12(grandTot12,ckGrandTot12)}</td></tr></tbody></table>
+      <table class="quy-tbl"><thead><tr><th>Tên TDV</th>${hdrs12}<th style="text-align:center">Tổng KH</th></tr></thead><tbody>${rows12.join('')}<tr class="quy-tbl-total"><td>Tổng</td>${totCells12.join('')}<td style="text-align:center;font-weight:700">${grandTot12}</td></tr></tbody></table>
     </div>`;
   })()}
 </div>`;
@@ -1211,6 +1233,39 @@ function renderQuarterlyReport(data) {
     const totKd  = allHdRows.reduce((s,t)=>s+(t.totalKhDskh||0),0);
     const totPq  = totKq>0?Math.round(totHd/totKq*100):0;
     const totPd  = totKd>0?Math.round(totHd/totKd*100):0;
+    // Mục 21 & 22 — So sánh CK (chỉ hiện khi có file HOPDONGCK)
+    const hasCkHd = Object.values(hdCompareMap).some(v => v.ck > 0);
+    const cmpRows = tdvRows.filter(t => (hdCompareMap[t.maTDV]?.ht||0) > 0 || (hdCompareMap[t.maTDV]?.ck||0) > 0);
+    const rows21 = cmpRows.map(t => {
+      const c = hdCompareMap[t.maTDV] || {};
+      const d = c.delta || 0;
+      const dStr = d === 0 ? '0' : (d > 0 ? `<span style="color:#27AE60;font-weight:700">+${d}</span>` : `<span style="color:#E74C3C;font-weight:700">${d}</span>`);
+      return `<tr><td>${t.tenTDV}</td><td style="text-align:center;font-weight:700">${c.ht||0}</td><td style="text-align:center">${c.ck||0}</td><td style="text-align:center">${dStr}</td></tr>`;
+    });
+    const tot21Ht = cmpRows.reduce((s,t)=>s+(hdCompareMap[t.maTDV]?.ht||0),0);
+    const tot21Ck = cmpRows.reduce((s,t)=>s+(hdCompareMap[t.maTDV]?.ck||0),0);
+    const tot21D  = tot21Ht - tot21Ck;
+    const tot21DStr = tot21D===0?'0':(tot21D>0?`<span style="color:#27AE60;font-weight:700">+${tot21D}</span>`:`<span style="color:#E74C3C;font-weight:700">${tot21D}</span>`);
+    const rows22 = tdvRows.filter(t=>(hdCompareMap[t.maTDV]?.ht||0)>0).map(t => {
+      const c = hdCompareMap[t.maTDV] || {};
+      return `<tr><td>${t.tenTDV}</td><td style="text-align:center;font-weight:700;color:#1565C0">${c.taiKy||0}</td><td style="text-align:center;font-weight:700;color:#2E7D32">${c.moi||0}</td><td style="text-align:center">${c.ht||0}</td></tr>`;
+    });
+    const tot22Tai = tdvRows.reduce((s,t)=>s+(hdCompareMap[t.maTDV]?.taiKy||0),0);
+    const tot22Moi = tdvRows.reduce((s,t)=>s+(hdCompareMap[t.maTDV]?.moi||0),0);
+    const tot22Ht  = tot22Tai + tot22Moi;
+    const ckHdHtml = hasCkHd ? `
+  <div class="quy-chart-grid quy-chart-grid-2" style="margin-top:12px">
+    <div class="quy-chart-card">
+      <div class="quy-chart-title">21 · SO SÁNH SỐ LƯỢNG HĐ HIỆN TẠI SO VỚI CÙNG KỲ<span class="quy-chart-unit">Unique KH ký HĐ</span></div>
+      <table class="quy-tbl"><thead><tr><th>Tên TDV</th><th style="text-align:center">HĐ Hiện Tại</th><th style="text-align:center">HĐ Cùng Kỳ</th><th style="text-align:center">Chênh lệch</th></tr></thead>
+      <tbody>${rows21.join('')}<tr class="quy-tbl-total"><td>Tổng</td><td style="text-align:center;font-weight:700">${tot21Ht}</td><td style="text-align:center;font-weight:700">${tot21Ck}</td><td style="text-align:center">${tot21DStr}</td></tr></tbody></table>
+    </div>
+    <div class="quy-chart-card">
+      <div class="quy-chart-title">22 · HĐ TÁI KÝ VÀ HĐ MỚI THEO TDV<span class="quy-chart-unit">Tái ký = KH có HĐ cả 2 kỳ · Mới = KH chưa từng ký cùng kỳ</span></div>
+      <table class="quy-tbl"><thead><tr><th>Tên TDV</th><th style="text-align:center;color:#1565C0">Tái ký</th><th style="text-align:center;color:#2E7D32">HĐ Mới</th><th style="text-align:center">Tổng HĐ HT</th></tr></thead>
+      <tbody>${rows22.join('')}<tr class="quy-tbl-total"><td>Tổng</td><td style="text-align:center;font-weight:700;color:#1565C0">${tot22Tai}</td><td style="text-align:center;font-weight:700;color:#2E7D32">${tot22Moi}</td><td style="text-align:center;font-weight:700">${tot22Ht}</td></tr></tbody></table>
+    </div>
+  </div>` : '';
     return `<div class="quy-section">
   <div class="quy-sec-hdr"><span class="quy-sec-num">IV</span> HỢP ĐỒNG</div>
   <div class="quy-chart-grid quy-chart-grid-2">
@@ -1224,6 +1279,7 @@ function renderQuarterlyReport(data) {
       <tbody>${rows16.join('')}<tr class="quy-tbl-total"><td>Tổng</td><td style="text-align:center;font-weight:700">${totHd}</td><td style="text-align:center">${totKq}</td><td style="text-align:center">${totKd||'—'}</td><td style="text-align:center;font-weight:700">${totKq>0?totPq+'%':'—'}</td><td style="text-align:center;font-weight:700">${totKd>0?totPd+'%':'—'}</td></tr></tbody></table>
     </div>
   </div>
+  ${ckHdHtml}
 </div>`;
   })()}
   ${(() => {
@@ -1550,6 +1606,7 @@ function onQuyMienChange(selectedMien) {
     ckTdvNhomDsMap:    _quyReport.ckTdvNhomDsMap    || {},
     ckTdvKhSpBuckets:  _quyReport.ckTdvKhSpBuckets  || {},
     ckTdvKhMonthBuckets: _quyReport.ckTdvKhMonthBuckets || {},
+    hdCompareMap:      _quyReport.hdCompareMap       || {},
   });
   const out = document.getElementById('quy-output');
   if (!out) return;

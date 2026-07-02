@@ -336,6 +336,7 @@ let _qDataCurrent    = null; // current quarter full order file (all 3 months, s
 let _qDataCK         = null; // same-quarter previous year order data for comparison
 let _qTargets        = null; // targets from MAU_TARGET_QUY.xlsx [{maTDV, mien, dsTongTarget, ...}]
 let _qHopDong        = null; // hop dong data from HOPDONGHIENTAI.xlsx {byTdvYear}
+let _qHopDongCK      = null; // hop dong cung ky from HOPDONGCK.xlsx {byTdvYear, byTdvKhSet, allKhSet}
 
 function setupKhMoiUpload() {
   const inputDskh = document.getElementById('input-khmoi-dskh');
@@ -586,6 +587,22 @@ function setupQuarterlyUpload() {
       reader.readAsArrayBuffer(file);
     });
   }
+
+  const inpHdCk = document.getElementById('input-quy-hopDongCK');
+  if (inpHdCk) {
+    inpHdCk.addEventListener('change', e => {
+      const file = e.target.files[0]; if (!file) return;
+      document.getElementById('label-quy-hopDongCK').textContent = file.name;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          _qHopDongCK = parseHopDongFile(ev.target.result);
+          _updateQuyStatus();
+        } catch(err) { alert('Lỗi đọc file HĐ Cùng Kỳ: ' + err.message); }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  }
 }
 
 function _updateQuyStatus() {
@@ -599,6 +616,7 @@ function _updateQuyStatus() {
   if (_qSpNhom)   parts.push(`Nhóm: ${Object.keys(_qSpNhom).length} SP`);
   if (_qTargets)  parts.push(`Target: ${_qTargets.filter(t=>t.doiTuong!=='QLBH').length} TDV`);
   if (_qHopDong)  parts.push(`HĐ: ${Object.keys(_qHopDong.byTdvYear||{}).length} TDV`);
+  if (_qHopDongCK) parts.push(`HĐ CK: ${(_qHopDongCK.allKhSet?.size||0)} KH`);
   const el = document.getElementById('quy-status');
   if (el) el.textContent = parts.join(' · ');
 }
@@ -631,7 +649,7 @@ async function onQuarterlyCalculate() {
     });
 
     const targets = _qTargets || staticData.targets || [];
-    const result = calculateQuarterlyReport(qData, currentOrders, _qSpNhom, targets, dskhByTdv, _qDataCK, _qHopDong);
+    const result = calculateQuarterlyReport(qData, currentOrders, _qSpNhom, targets, dskhByTdv, _qDataCK, _qHopDong, _qHopDongCK);
     out.innerHTML = renderQuarterlyReport(result);
     setTimeout(() => initQuyCharts(), 80);
   } catch(err) {
