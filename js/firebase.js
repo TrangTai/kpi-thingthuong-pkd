@@ -32,6 +32,16 @@ async function fbGetUserDoc(uid) {
 }
 
 async function fbSaveResults(results, quyMap, metaLabel, targets, companyKhMap, bangGiaMap) {
+  // Xóa các document cũ không còn trong kết quả mới (tránh stale data cho QLBH query)
+  const newIdSet = new Set(results.map(r => r.maTDV));
+  const existingSnap = await db.collection('results').get();
+  const staleRefs = existingSnap.docs.filter(d => !newIdSet.has(d.id)).map(d => d.ref);
+  for (let i = 0; i < staleRefs.length; i += 400) {
+    const delBatch = db.batch();
+    staleRefs.slice(i, i + 400).forEach(ref => delBatch.delete(ref));
+    await delBatch.commit();
+  }
+
   const BATCH_SIZE = 400;
   for (let i = 0; i < results.length; i += BATCH_SIZE) {
     const batch = db.batch();
