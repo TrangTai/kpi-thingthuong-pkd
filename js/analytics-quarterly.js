@@ -77,11 +77,10 @@ function parseQuyDataFile(arrayBuffer) {
 
   const byTdvMonth = {}, byMonth = {}, byTdv = {}, tdvInfo = {}, quyTargets = [];
 
-  // Detect layout: chuẩn (DS ở col 5) vs legacy (DS ở col 4, T09 Target = T08 Target)
-  // Legacy xảy ra khi col 5 (DS T+CT) hoàn toàn trống nhưng col 4 có data thực
-  const anyInCol5 = rows.slice(1).some(r => cleanNum(r[5]) > 0);
-  const anyInCol4 = rows.slice(1).some(r => cleanNum(r[4]) > 0);
-  const legacyLayout = !anyInCol5 && anyInCol4;
+  // Khởi tạo byMonth với 3 tháng của quý (để quarter detection hoạt động dù DS = 0)
+  if (mk1) byMonth[mk1] = 0;
+  if (mk2) byMonth[mk2] = 0;
+  if (mk3) byMonth[mk3] = 0;
 
   for (let i = 1; i < rows.length; i++) {
     const row    = rows[i];
@@ -91,12 +90,11 @@ function parseQuyDataFile(arrayBuffer) {
 
     const t1tgt = cleanNum(row[2]);
     const t2tgt = cleanNum(row[3]);
-    // Legacy: T09 Target không có riêng → dùng T08 Target; DS nằm ở col 4
-    // Standard: T09 Target ở col 4; DS ở col 5,6,7
-    const t3tgt = legacyLayout ? t2tgt           : cleanNum(row[4]);
-    const ds1   = legacyLayout ? cleanNum(row[4]) : cleanNum(row[5]);
-    const ds2   = legacyLayout ? cleanNum(row[5]) : cleanNum(row[6]);
-    const ds3   = legacyLayout ? cleanNum(row[6]) : cleanNum(row[7]);
+    // col[4] = T09 Target (theo header), col[5/6/7] = DS T07/T08/T09 thực
+    const t3tgt = cleanNum(row[4]);
+    const ds1   = cleanNum(row[5]);
+    const ds2   = cleanNum(row[6]);
+    const ds3   = cleanNum(row[7]);
 
     tdvInfo[maTDV]    = { tenTDV, khuVuc: '', maQLBH: '' };
     byTdvMonth[maTDV] = {};

@@ -522,15 +522,22 @@ function setupQuarterlyUpload() {
       const reader = new FileReader();
       reader.onload = ev => {
         try {
-          // Try new per-TDV summary format first; fall back to per-order format
-          const parsed = parseQuyDataFile(ev.target.result) || parseQuyOrderFileCK(ev.target.result);
-          _qDataCurrent = parsed;
-          const n = parsed ? Object.keys(parsed.byTdv || {}).length : 0;
-          // Auto-populate targets from new format if no separate target file loaded
-          if (parsed?.quyTargets?.length && !_qTargets) _qTargets = parsed.quyTargets;
+          const quyParsed = parseQuyDataFile(ev.target.result);
+          if (quyParsed) {
+            // Format tóm tắt: luôn update _qTargets; DS lấy từ file đơn hàng riêng
+            if (quyParsed.quyTargets?.length) _qTargets = quyParsed.quyTargets;
+            // Chỉ set _qDataCurrent nếu file có DS thực (col DS không trống)
+            const hasDs = Object.values(quyParsed.byMonth || {}).some(v => v > 0);
+            if (hasDs) _qDataCurrent = quyParsed;
+          } else {
+            const parsed = parseQuyOrderFileCK(ev.target.result);
+            _qDataCurrent = parsed;
+            if (parsed?.quyTargets?.length && !_qTargets) _qTargets = parsed.quyTargets;
+          }
           _updateQuyStatus();
-          if (!n) alert('Không đọc được dữ liệu. Kiểm tra format file (Mã TDV ở cột 1, Target ở cột 3-5 hoặc cột J = Mã TDV, cột I = Tổng Tiền).');
-        } catch(err) { alert('Lỗi đọc DOANHSOQUY: ' + err.message); }
+          const n = _qDataCurrent ? Object.keys(_qDataCurrent.byTdv || {}).length : 0;
+          if (!n && !_qTargets) alert('Không đọc được dữ liệu. Kiểm tra format file (Mã TDV ở cột 1, Target ở cột 3-5 hoặc cột J = Mã TDV, cột I = Tổng Tiền).');
+        } catch(err) { alert('Lỗi đọc file: ' + err.message); }
       };
       reader.readAsArrayBuffer(file);
     });
