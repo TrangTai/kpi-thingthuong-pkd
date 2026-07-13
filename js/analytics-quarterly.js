@@ -47,6 +47,77 @@ function parseTargetQuyFile(arrayBuffer) {
   return targets;
 }
 
+// ─── DỮ LIỆU QUÝ summary format parser ──────────────────────
+// Format: MãTDV | TênTDV | T07 Target | T08 Target | T09 Target |
+//         DS T+CT T07 | T08 Thực | T09 Thực
+// (replaces per-order DOANHSOQUYHIENTAI when this format is detected)
+function parseQuyDataFile(arrayBuffer) {
+  const wb   = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false });
+  const ws   = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  if (rows.length < 2) return null;
+
+  const cleanNum = v => {
+    if (typeof v === 'number') return isNaN(v) ? 0 : v;
+    return parseFloat(String(v || '').replace(/[,\s]/g, '')) || 0;
+  };
+
+  const hdr = rows[0].map(h => String(h || '').trim().toLowerCase());
+
+  // Detect month number from header like "T07 Target" or "T07" → 7
+  const getMonth = h => { const m = h.match(/t(\d{2})/i); return m ? parseInt(m[1]) : 0; };
+  const m1 = getMonth(hdr[2] || '');
+  const m2 = getMonth(hdr[3] || '');
+  const m3 = getMonth(hdr[4] || '');
+  if (!m1) return null; // not the new summary format
+
+  const year = new Date().getFullYear();
+  const mkFmt = m => m ? `${year}-${String(m).padStart(2, '0')}` : null;
+  const mk1 = mkFmt(m1), mk2 = mkFmt(m2), mk3 = mkFmt(m3);
+
+  const byTdvMonth = {}, byMonth = {}, byTdv = {}, tdvInfo = {}, quyTargets = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const row    = rows[i];
+    const maTDV  = String(row[0] || '').trim().toUpperCase();
+    const tenTDV = String(row[1] || '').trim();
+    if (!maTDV) continue;
+
+    const t1tgt = cleanNum(row[2]);
+    const t2tgt = cleanNum(row[3]);
+    const t3tgt = cleanNum(row[4]);
+    const ds1   = cleanNum(row[5]);
+    const ds2   = cleanNum(row[6]);
+    const ds3   = cleanNum(row[7]);
+
+    tdvInfo[maTDV]   = { tenTDV, khuVuc: '', maQLBH: '' };
+    byTdvMonth[maTDV] = {};
+    let totalDs = 0;
+
+    [[mk1, ds1], [mk2, ds2], [mk3, ds3]].forEach(([mk, ds]) => {
+      if (!mk) return;
+      byTdvMonth[maTDV][mk] = { ds, khDsMap: {}, spDsMap: {} };
+      byMonth[mk] = (byMonth[mk] || 0) + ds;
+      totalDs += ds;
+    });
+
+    byTdv[maTDV] = { ds: totalDs, khDsMap: {}, spDsMap: {} };
+
+    quyTargets.push({
+      maTDV, tenTDV, khuVuc: '', mien: '', qlbhCode: '', doiTuong: 'TDV',
+      dsTongTarget: t1tgt + t2tgt + t3tgt,
+      dpkhTarget: 0, dpmhTarget: 0, isQuyTarget: true,
+      monthTargets: { [mk1]: t1tgt, [mk2]: t2tgt, [mk3]: t3tgt },
+    });
+  }
+
+  return {
+    byTdv, byMaSP: {}, bySPKhSet: {}, byTdvSPKhSet: {},
+    byMonth, byMonthKhMap: {}, byTdvMonth, tdvInfo,
+    khInfoMap: {}, byTdvOrderSet: {}, quyTargets,
+  };
+}
+
 // ─── SP→Nhóm mapping parser ──────────────────────────────────
 function parseSpNhomFile(arrayBuffer) {
   const wb   = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false });

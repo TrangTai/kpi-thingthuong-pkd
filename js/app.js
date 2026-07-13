@@ -519,12 +519,20 @@ function setupQuarterlyUpload() {
     inpCurrent.addEventListener('change', e => {
       const file = e.target.files[0]; if (!file) return;
       document.getElementById('label-quy-current').textContent = file.name;
-      _readQuyFile(file, parsed => {
-        _qDataCurrent = parsed;
-        const n = parsed ? Object.keys(parsed.byTdv || {}).length : 0;
-        _updateQuyStatus();
-        if (!n) alert('Không đọc được dữ liệu. Kiểm tra format file (cột J = Mã TDV, cột I = Tổng Tiền).');
-      }, 'Lỗi đọc DOANHSOQUY');
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          // Try new per-TDV summary format first; fall back to per-order format
+          const parsed = parseQuyDataFile(ev.target.result) || parseQuyOrderFileCK(ev.target.result);
+          _qDataCurrent = parsed;
+          const n = parsed ? Object.keys(parsed.byTdv || {}).length : 0;
+          // Auto-populate targets from new format if no separate target file loaded
+          if (parsed?.quyTargets?.length && !_qTargets) _qTargets = parsed.quyTargets;
+          _updateQuyStatus();
+          if (!n) alert('Không đọc được dữ liệu. Kiểm tra format file (Mã TDV ở cột 1, Target ở cột 3-5 hoặc cột J = Mã TDV, cột I = Tổng Tiền).');
+        } catch(err) { alert('Lỗi đọc DOANHSOQUY: ' + err.message); }
+      };
+      reader.readAsArrayBuffer(file);
     });
   }
 
@@ -648,7 +656,7 @@ async function onQuarterlyCalculate() {
       if (t) dskhByTdv[t] = (dskhByTdv[t] || 0) + 1;
     });
 
-    const targets = _qTargets || staticData.targets || [];
+    const targets = _qTargets || qData?.quyTargets || staticData.targets || [];
     const result = calculateQuarterlyReport(qData, currentOrders, _qSpNhom, targets, dskhByTdv, _qDataCK, _qHopDong, _qHopDongCK);
     out.innerHTML = renderQuarterlyReport(result);
     setTimeout(() => initQuyCharts(), 80);
@@ -890,12 +898,16 @@ function exportFileData(key) {
 function downloadQuyTemplate() {
   const qc = CONFIG.QUY_CONFIG;
   const wb = XLSX.utils.book_new();
-  const hdrs = ['Mã TDV','Tên TDV', qc.thang1+' Target', qc.thang2+' Target', qc.thang1+' Thực (DS T+CT)', qc.thang2+' Thực (DS T+CT)'];
+  const hdrs = [
+    'Mã TDV', 'Tên TDV',
+    qc.thang1 + ' Target', qc.thang2 + ' Target', qc.thang3 + ' Target',
+    'DS T+CT tháng ' + qc.thang1, qc.thang2 + ' Thực (DS T+CT)', qc.thang3 + ' Thực (DS T+CT)',
+  ];
   const ws = XLSX.utils.aoa_to_sheet([hdrs]);
-  ws['!cols'] = [10,22,16,16,22,22].map(w=>({wch:w}));
-  ws['!freeze'] = { xSplit:0, ySplit:1, topLeftCell:'A2', activePane:'bottomLeft' };
+  ws['!cols'] = [10, 22, 16, 16, 16, 22, 22, 22].map(w => ({ wch: w }));
+  ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' };
   XLSX.utils.book_append_sheet(wb, ws, 'Quý');
-  XLSX.writeFile(wb, `MAU_QUY_${qc.quyLabel.replace('/','_')}.xlsx`);
+  XLSX.writeFile(wb, `MAU_QUY_${qc.quyLabel.replace('/', '_')}.xlsx`);
 }
 
 // ─── Load static from localStorage ──────────────────────────
