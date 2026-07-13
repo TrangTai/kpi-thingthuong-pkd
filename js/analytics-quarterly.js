@@ -77,6 +77,15 @@ function parseQuyDataFile(arrayBuffer) {
 
   const byTdvMonth = {}, byMonth = {}, byTdv = {}, tdvInfo = {}, quyTargets = [];
 
+  // First pass: detect which months (T2, T3) have any actual DS data
+  // T1 is always the current reporting month so its target is always included
+  let anyDs2 = false, anyDs3 = false;
+  for (let i = 1; i < rows.length; i++) {
+    if (!String(rows[i][0] || '').trim()) continue;
+    if (cleanNum(rows[i][6]) > 0) anyDs2 = true;
+    if (cleanNum(rows[i][7]) > 0) anyDs3 = true;
+  }
+
   for (let i = 1; i < rows.length; i++) {
     const row    = rows[i];
     const maTDV  = String(row[0] || '').trim().toUpperCase();
@@ -90,12 +99,13 @@ function parseQuyDataFile(arrayBuffer) {
     const ds2   = cleanNum(row[6]);
     const ds3   = cleanNum(row[7]);
 
-    tdvInfo[maTDV]   = { tenTDV, khuVuc: '', maQLBH: '' };
+    tdvInfo[maTDV]    = { tenTDV, khuVuc: '', maQLBH: '' };
     byTdvMonth[maTDV] = {};
     let totalDs = 0;
 
+    // Only add months with actual DS > 0 to avoid 0-value entries polluting byMonth
     [[mk1, ds1], [mk2, ds2], [mk3, ds3]].forEach(([mk, ds]) => {
-      if (!mk) return;
+      if (!mk || ds <= 0) return;
       byTdvMonth[maTDV][mk] = { ds, khDsMap: {}, spDsMap: {} };
       byMonth[mk] = (byMonth[mk] || 0) + ds;
       totalDs += ds;
@@ -103,9 +113,14 @@ function parseQuyDataFile(arrayBuffer) {
 
     byTdv[maTDV] = { ds: totalDs, khDsMap: {}, spDsMap: {} };
 
+    // Target = sum of targets for months that have actual DS data globally.
+    // T1 target always included (current reporting month).
+    // T2/T3 targets only if their columns have any non-zero DS in the file.
+    const dsTongTarget = t1tgt + (anyDs2 ? t2tgt : 0) + (anyDs3 ? t3tgt : 0);
+
     quyTargets.push({
       maTDV, tenTDV, khuVuc: '', mien: '', qlbhCode: '', doiTuong: 'TDV',
-      dsTongTarget: t1tgt + t2tgt + t3tgt,
+      dsTongTarget,
       dpkhTarget: 0, dpmhTarget: 0, isQuyTarget: true,
       monthTargets: { [mk1]: t1tgt, [mk2]: t2tgt, [mk3]: t3tgt },
     });
