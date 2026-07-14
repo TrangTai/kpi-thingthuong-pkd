@@ -64,12 +64,20 @@ function parseQuyDataFile(arrayBuffer) {
 
   const hdr = rows[0].map(h => String(h || '').trim().toLowerCase());
 
-  // Detect month number from header like "T07 Target" or "T07" → 7
+  // Detect month number from header like "T07 Target", "(1) Target T07", etc. → 7
   const getMonth = h => { const m = h.match(/t(\d{2})/i); return m ? parseInt(m[1]) : 0; };
   const m1 = getMonth(hdr[2] || '');
-  const m2 = getMonth(hdr[3] || '');
-  const m3 = getMonth(hdr[4] || '');
   if (!m1) return null; // not the new summary format
+
+  // Layout detection:
+  // - Paired format: "(1) Target T07" | "(1) Hoàn thành T07" → hdr[2] và hdr[3] cùng tháng
+  //   cols: [2]=Tgt1 [3]=DS1 [4]=Tgt2 [5]=DS2 [6]=Tgt3 [7]=DS3
+  // - Sequential format: "T07 Target" | "T08 Target" → hdr[2] và hdr[3] khác tháng
+  //   cols: [2]=Tgt1 [3]=Tgt2 [4]=Tgt3 [5]=DS1 [6]=DS2 [7]=DS3
+  const m1col3 = getMonth(hdr[3] || '');
+  const pairedLayout = m1col3 > 0 && m1col3 === m1;
+  const m2 = pairedLayout ? getMonth(hdr[4] || '') : getMonth(hdr[3] || '');
+  const m3 = pairedLayout ? getMonth(hdr[6] || '') : getMonth(hdr[4] || '');
 
   const year = new Date().getFullYear();
   const mkFmt = m => m ? `${year}-${String(m).padStart(2, '0')}` : null;
@@ -88,13 +96,14 @@ function parseQuyDataFile(arrayBuffer) {
     const tenTDV = String(row[1] || '').trim();
     if (!maTDV) continue;
 
+    // Paired:     [2]=T1Tgt [3]=T1DS [4]=T2Tgt [5]=T2DS [6]=T3Tgt [7]=T3DS
+    // Sequential: [2]=T1Tgt [3]=T2Tgt [4]=T3Tgt [5]=T1DS [6]=T2DS [7]=T3DS
     const t1tgt = cleanNum(row[2]);
-    const t2tgt = cleanNum(row[3]);
-    // col[4] = T09 Target (theo header), col[5/6/7] = DS T07/T08/T09 thực
-    const t3tgt = cleanNum(row[4]);
-    const ds1   = cleanNum(row[5]);
-    const ds2   = cleanNum(row[6]);
-    const ds3   = cleanNum(row[7]);
+    const ds1   = pairedLayout ? cleanNum(row[3]) : cleanNum(row[5]);
+    const t2tgt = pairedLayout ? cleanNum(row[4]) : cleanNum(row[3]);
+    const ds2   = pairedLayout ? cleanNum(row[5]) : cleanNum(row[6]);
+    const t3tgt = pairedLayout ? cleanNum(row[6]) : cleanNum(row[4]);
+    const ds3   = pairedLayout ? cleanNum(row[7]) : cleanNum(row[7]);
 
     tdvInfo[maTDV]    = { tenTDV, khuVuc: '', maQLBH: '' };
     byTdvMonth[maTDV] = {};
