@@ -61,6 +61,25 @@ function renderTable(results, quyMap) {
   const _qt = r => { const d=_qd(r); return d.t1Target + d.t2Target + r.dsTongTarget; };
   const _qh = r => { const d=_qd(r); return d.t1Thuc   + d.t2Thuc   + r.dsTongCT;     };
 
+  // Detect vị trí tháng hiện tại trong quý (0=thang1, 1=thang2, 2=thang3)
+  // Để data tháng hiện tại hiển thị đúng cột (T07→cột 1, T08→cột 2, T09→cột 3)
+  const _mnm  = t => parseInt((t||'').replace(/\D/g,'')) || 0;
+  const _curM = new Date().getMonth() + 1;
+  const _cp   = Math.max(0, [qc.thang1, qc.thang2, qc.thang3].findIndex(t => _mnm(t) === _curM));
+  // per-cột Target/Hoàn thành: pos=0→T07, pos=1→T08, pos=2→T09
+  const _colT = (pos, r) => {
+    if (pos === _cp) return r.dsTongTarget;          // tháng hiện tại
+    if (pos >  _cp) return 0;                        // tháng tương lai
+    const d = _qd(r);
+    return pos === 0 ? d.t1Target : d.t2Target;      // tháng đã qua (từ quyMap)
+  };
+  const _colH = (pos, r) => {
+    if (pos === _cp) return r.dsTongCT;
+    if (pos >  _cp) return 0;
+    const d = _qd(r);
+    return pos === 0 ? d.t1Thuc : d.t2Thuc;
+  };
+
   // ── Header row 1 (group headers) ──────────────────────────
   const groups = [
     { text: 'Mã TDV',              rowspan: 2, sticky: 1, cls: 'col-matdv' },
@@ -127,14 +146,14 @@ function renderTable(results, quyMap) {
     { text: 'Mức 135%', cls: 'h-con-thang', nf: 'con135', ph: '>=M', key: r => Math.max(0, r.dsTongTarget * 1.35 - r.dsTongCT), fmt: 'vndC', compact: true, tip: 'Còn thiếu để đạt 135% DS tháng (T+CT)' },
     ...(quyMap ? [
       // TARGET Quý (4)
-      { text: qc.thang1+' Target', cls:'h-quy-target', nf:'qt1t',  ph:'>=M', key:r=>{const d=_qd(r);return d.t1Target;},                          fmt:'vndC', compact:true, tip:'Target '+qc.thang1+' (import)' },
-      { text: qc.thang2+' Target', cls:'h-quy-target', nf:'qt2t',  ph:'>=M', key:r=>{const d=_qd(r);return d.t2Target;},                          fmt:'vndC', compact:true, tip:'Target '+qc.thang2+' (import)' },
-      { text: qc.thang3+' Target', cls:'h-quy-target', nf:'qt3t',  ph:'>=M', key:r=>r.dsTongTarget,                                               fmt:'vndC', compact:true, tip:'Target '+qc.thang3+' (từ TARGET tháng này)' },
-      { text: 'Tổng Target',       cls:'h-quy-target', nf:'qtott', ph:'>=M', key:r=>_qt(r),                                                       fmt:'vndC', compact:true, tip:'Tổng Target '+qc.quyLabel },
+      { text: qc.thang1+' Target', cls:'h-quy-target', nf:'qt1t',  ph:'>=M', key:r=>_colT(0,r), fmt:'vndC', compact:true, tip:'Target '+qc.thang1 },
+      { text: qc.thang2+' Target', cls:'h-quy-target', nf:'qt2t',  ph:'>=M', key:r=>_colT(1,r), fmt:'vndC', compact:true, tip:'Target '+qc.thang2 },
+      { text: qc.thang3+' Target', cls:'h-quy-target', nf:'qt3t',  ph:'>=M', key:r=>_colT(2,r), fmt:'vndC', compact:true, tip:'Target '+qc.thang3 },
+      { text: 'Tổng Target',       cls:'h-quy-target', nf:'qtott', ph:'>=M', key:r=>_qt(r),      fmt:'vndC', compact:true, tip:'Tổng Target '+qc.quyLabel },
       // HOÀN THÀNH Quý (4)
-      { text: qc.thang1,           cls:'h-quy-actual', nf:'qt1',   ph:'>=M', key:r=>{const d=_qd(r);return d.t1Thuc;},                            fmt:'vndC', compact:true, tip:'DS T+CT '+qc.thang1+' (import)' },
-      { text: qc.thang2,           cls:'h-quy-actual', nf:'qt2',   ph:'>=M', key:r=>{const d=_qd(r);return d.t2Thuc;},                            fmt:'vndC', compact:true, tip:'DS T+CT '+qc.thang2+' (import)' },
-      { text: qc.thang3,           cls:'h-quy-actual', nf:'qt3',   ph:'>=M', key:r=>r.dsTongCT,                                                   fmt:'vndC', compact:true, tip:'DS T+CT '+qc.thang3+' (tháng này)' },
+      { text: qc.thang1,           cls:'h-quy-actual', nf:'qt1',   ph:'>=M', key:r=>_colH(0,r), fmt:'vndC', compact:true, tip:'DS T+CT '+qc.thang1 },
+      { text: qc.thang2,           cls:'h-quy-actual', nf:'qt2',   ph:'>=M', key:r=>_colH(1,r), fmt:'vndC', compact:true, tip:'DS T+CT '+qc.thang2 },
+      { text: qc.thang3,           cls:'h-quy-actual', nf:'qt3',   ph:'>=M', key:r=>_colH(2,r), fmt:'vndC', compact:true, tip:'DS T+CT '+qc.thang3 },
       { text: 'Tổng',              cls:'h-quy-actual', nf:'qtot',  ph:'>=M', key:r=>_qh(r),                                                       fmt:'vndC', compact:true, tip:'Tổng DS T+CT '+qc.quyLabel },
       // % ĐẠT Quý (1)
       { text: '% Đạt',             cls:'h-quy-pct',    nf:'qpct',  ph:'>=60',key:r=>{const tT=_qt(r);return tT>0?_qh(r)/tT:0;},                  fmt:'pct',  scale:100, compact:true, tip:'Tổng HT / Tổng Target '+qc.quyLabel },
@@ -428,21 +447,24 @@ function exportToExcel(results, dpkhDetail, dpmhDetail, quyMap) {
 
   // ── Sheet 5: Quý ─────────────────────────────────────────
   if (quyMap) {
-    const qc = CONFIG.QUY_CONFIG;
-    const _qd = r => (quyMap[r.maTDV]) || { t1Target:0, t2Target:0, t1Thuc:0, t2Thuc:0 };
+    const qc   = CONFIG.QUY_CONFIG;
+    const _qd2 = r => (quyMap[r.maTDV]) || { t1Target:0, t2Target:0, t1Thuc:0, t2Thuc:0 };
+    const _mn2 = t => parseInt((t||'').replace(/\D/g,'')) || 0;
+    const _cp2 = Math.max(0, [qc.thang1, qc.thang2, qc.thang3].findIndex(t => _mn2(t) === (new Date().getMonth()+1)));
+    const _cT2 = (pos, r) => { if (pos===_cp2) return r.dsTongTarget; if (pos>_cp2) return 0; const d=_qd2(r); return pos===0?d.t1Target:d.t2Target; };
+    const _cH2 = (pos, r) => { if (pos===_cp2) return r.dsTongCT;     if (pos>_cp2) return 0; const d=_qd2(r); return pos===0?d.t1Thuc:d.t2Thuc; };
     const hdrsQ = ['Mã TDV','Tên TDV',
       qc.thang1+' Target', qc.thang2+' Target', qc.thang3+' Target', 'Tổng Target',
       qc.thang1+' Thực',   qc.thang2+' Thực',   qc.thang3+' Thực',  'Tổng Thực',
       '% Đạt '+qc.quyLabel, 'Còn 100%','Còn 110%','Còn 120%','Còn 130%',
     ];
     const rowsQ = [hdrsQ, ...results.map(r => {
-      const d = _qd(r);
-      const tT = d.t1Target + d.t2Target + r.dsTongTarget;
-      const tH = d.t1Thuc   + d.t2Thuc   + r.dsTongCT;
+      const tT = _cT2(0,r) + _cT2(1,r) + _cT2(2,r);
+      const tH = _cH2(0,r) + _cH2(1,r) + _cH2(2,r);
       return [
         r.maTDV, r.tenTDV,
-        d.t1Target, d.t2Target, r.dsTongTarget, tT,
-        d.t1Thuc,   d.t2Thuc,   r.dsTongCT,     tH,
+        _cT2(0,r), _cT2(1,r), _cT2(2,r), tT,
+        _cH2(0,r), _cH2(1,r), _cH2(2,r), tH,
         tT > 0 ? tH/tT : 0,
         Math.max(0,tT*1.0-tH), Math.max(0,tT*1.1-tH),
         Math.max(0,tT*1.2-tH), Math.max(0,tT*1.3-tH),

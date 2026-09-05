@@ -105,43 +105,68 @@ async function parseDhLon(file) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 2b. ĐƠN HÀNG — Format Kinh Doanh (18 cột, header row 1)
-//    Col: [0]=MãĐH [1]=NgàyĐH [3]=TrạngThái [4]=MãKH [5]=TênKH
-//         [7]=MãSP [8]=TênSP  [10]=ĐơnGiá(filter=0) [11]=SốLượng
-//         [12]=TổngTiền(doanhSo) [15]=MãTDV
-//    nhomTinhLuong / nhomPTML: enrich từ bảng giá sau
+// 2b. ĐƠN HÀNG — Format Kinh Doanh (header-based, hỗ trợ cả mẫu cũ 18 cột và mẫu mới CMS)
+//    Mẫu cũ:  [0]MãĐH [1]NgàyĐH [4]MãKH [5]TênKH [7]MãSP [8]TênSP
+//              [10]ĐơnGiá [11]SốLượng [12]TổngTiền [15]MãTDV
+//    Mẫu mới: [1]MãĐH [3]NgàyTạoĐơn [4]MãKH [5]TênKH [6]MãNV [9]MãSP [10]TênSP
+//              [13]ĐơnGiá [12]SốLượng [16]TổngTiền
 // ─────────────────────────────────────────────────────────────
 async function parseDonHangKinhDoanh(file) {
   const buf = await readFileAsArrayBuffer(file);
-  const wb  = XLSX.read(buf, { type: 'array', cellDates: false });
+  // Detect HTML frameset (CMS .xls export thiếu folder _files — không đọc được)
+  const snippet = new TextDecoder('utf-8', { fatal: false }).decode(new Uint8Array(buf, 0, 400));
+  if (/<frameset/i.test(snippet) || (/<html/i.test(snippet) && /frameset/i.test(snippet))) {
+    throw new Error(
+      'File .xls này là báo cáo HTML (cần folder _files đi kèm — không import trực tiếp được).\n' +
+      'Cách xử lý: Mở file trong Excel → Save As → Excel Workbook (.xlsx) → Import file .xlsx đó.'
+    );
+  }
+  const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: false });
   return _parseOrderSheetKinhDoanh(wb.Sheets[wb.SheetNames[0]]);
 }
 
 function _parseOrderSheetKinhDoanh(sheet) {
-  const range     = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
-  const headerRow = findHeaderRow(sheet, 'Mã Đơn Hàng');
+  // Tìm header row theo "Mã Đơn Hàng" (mẫu cũ) hoặc "Mã ĐH" (mẫu mới)
+  let hdrRow = findHeaderRow(sheet, 'Mã Đơn Hàng');
+  if (hdrRow < 0) hdrRow = findHeaderRow(sheet, 'Mã ĐH');
+  if (hdrRow < 0) return [];
 
+  // Tìm cột theo tên header
+  const cMaDH   = _findCol(sheet, hdrRow, ['mã đơn hàng', 'mã đh']);
+  const cNgay   = _findCol(sheet, hdrRow, ['ngày đh', 'ngày tạo đơn', 'ngày']);
+  const cMaKH   = _findCol(sheet, hdrRow, ['mã kh']);
+  const cTenKH  = _findCol(sheet, hdrRow, ['tên khách hàng', 'tên kh']);
+  const cMaNV   = _findCol(sheet, hdrRow, ['mã tdv', 'mã nv']);
+  const cMaSP   = _findCol(sheet, hdrRow, ['mã sp']);
+  const cTenSP  = _findCol(sheet, hdrRow, ['tên sp', 'tên sản phẩm']);
+  const cDonGia = _findCol(sheet, hdrRow, ['đơn giá']);
+  const cSoLuong= _findCol(sheet, hdrRow, ['số lượng']);
+  // Tổng Tiền: ưu tiên "tổng tiền" (sau CK), tránh nhầm "t.tiền (lương)"
+  const cDoanhSo= _findColExact(sheet, hdrRow, ['tổng tiền']);
+
+  const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
   const orders = [];
-  for (let r = headerRow + 1; r <= range.e.r; r++) {
-    const maDH = getCellStr(sheet, r, 0);
+
+  for (let r = hdrRow + 1; r <= range.e.r; r++) {
+    const maDH = cMaDH >= 0 ? getCellStr(sheet, r, cMaDH) : '';
     if (!maDH) continue;
 
-    const donGia = getCellNumber(sheet, r, 10);  // Col 11: Đơn Giá — bỏ nếu = 0
-    if (donGia === 0) continue;
+    const donGia = cDonGia >= 0 ? getCellNumber(sheet, r, cDonGia) : 1;
+    if (donGia === 0) continue; // bỏ hàng mẫu / tặng
 
-    const doanhSo = getCellNumber(sheet, r, 12); // Col 13: Tổng Tiền
+    const doanhSo = cDoanhSo >= 0 ? getCellNumber(sheet, r, cDoanhSo) : 0;
 
     orders.push({
       maDH,
-      maKH:          getCellStr(sheet, r, 4),    // Col 5
-      tenKH:         getCellStr(sheet, r, 5),    // Col 6
-      maSP:          getCellStr(sheet, r, 7),    // Col 8
-      tenSP:         getCellStr(sheet, r, 8),    // Col 9
-      maNV:          getCellStr(sheet, r, 15),   // Col 16
+      maKH:          cMaKH   >= 0 ? getCellStr(sheet, r, cMaKH)    : '',
+      tenKH:         cTenKH  >= 0 ? getCellStr(sheet, r, cTenKH)   : '',
+      maSP:          cMaSP   >= 0 ? getCellStr(sheet, r, cMaSP)    : '',
+      tenSP:         cTenSP  >= 0 ? getCellStr(sheet, r, cTenSP)   : '',
+      maNV:          cMaNV   >= 0 ? getCellStr(sheet, r, cMaNV)    : '',
       doanhSo,
       doanhSoDPMH:   doanhSo,
-      soLuong:       getCellNumber(sheet, r, 11),// Col 12
-      ngayDay:       _getOrderDay(sheet, r, 1),  // Col 2: Ngày ĐH
+      soLuong:       cSoLuong>= 0 ? getCellNumber(sheet, r, cSoLuong) : 0,
+      ngayDay:       cNgay   >= 0 ? _getOrderDay(sheet, r, cNgay)  : 0,
       nhomTinhLuong: '',
       nhomPTML:      '',
       qlbhNV:        '',
@@ -150,6 +175,16 @@ function _parseOrderSheetKinhDoanh(sheet) {
     });
   }
   return orders;
+}
+
+// Khớp chính xác (không chứa thêm từ khoá ngoài) — để tránh "tổng tiền" nhầm "t.tiền (lương)"
+function _findColExact(sheet, headerRow, keywords) {
+  const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
+  for (let c = range.s.c; c <= range.e.c; c++) {
+    const v = (getCellStr(sheet, headerRow, c) || '').toLowerCase().trim();
+    if (keywords.some(kw => v === kw)) return c;
+  }
+  return -1;
 }
 
 // Chuyển Excel serial date hoặc chuỗi → ngày trong tháng (1-31)

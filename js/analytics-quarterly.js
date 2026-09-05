@@ -47,6 +47,92 @@ function parseTargetQuyFile(arrayBuffer) {
   return targets;
 }
 
+// ─── DỮ LIỆU QUÝ summary format parser ──────────────────────
+// Format: MãTDV | TênTDV | T07 Target | T08 Target | T09 Target |
+//         DS T+CT T07 | T08 Thực | T09 Thực
+// (replaces per-order DOANHSOQUYHIENTAI when this format is detected)
+function parseQuyDataFile(arrayBuffer) {
+  const wb   = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false });
+  const ws   = wb.Sheets[wb.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  if (rows.length < 2) return null;
+
+  const cleanNum = v => {
+    if (typeof v === 'number') return isNaN(v) ? 0 : v;
+    return parseFloat(String(v || '').replace(/[,\s]/g, '')) || 0;
+  };
+
+  const hdr = rows[0].map(h => String(h || '').trim().toLowerCase());
+
+  // Detect month number from header like "T07 Target", "(1) Target T07", etc. → 7
+  const getMonth = h => { const m = h.match(/t(\d{2})/i); return m ? parseInt(m[1]) : 0; };
+  const m1 = getMonth(hdr[2] || '');
+  if (!m1) return null; // not the new summary format
+
+  // Layout detection:
+  // - Paired format: "(1) Target T07" | "(1) Hoàn thành T07" → hdr[2] và hdr[3] cùng tháng
+  //   cols: [2]=Tgt1 [3]=DS1 [4]=Tgt2 [5]=DS2 [6]=Tgt3 [7]=DS3
+  // - Sequential format: "T07 Target" | "T08 Target" → hdr[2] và hdr[3] khác tháng
+  //   cols: [2]=Tgt1 [3]=Tgt2 [4]=Tgt3 [5]=DS1 [6]=DS2 [7]=DS3
+  const m1col3 = getMonth(hdr[3] || '');
+  const pairedLayout = m1col3 > 0 && m1col3 === m1;
+  const m2 = pairedLayout ? getMonth(hdr[4] || '') : getMonth(hdr[3] || '');
+  const m3 = pairedLayout ? getMonth(hdr[6] || '') : getMonth(hdr[4] || '');
+
+  const year = new Date().getFullYear();
+  const mkFmt = m => m ? `${year}-${String(m).padStart(2, '0')}` : null;
+  const mk1 = mkFmt(m1), mk2 = mkFmt(m2), mk3 = mkFmt(m3);
+
+  const byTdvMonth = {}, byMonth = {}, byTdv = {}, tdvInfo = {}, quyTargets = [];
+
+  // Khởi tạo byMonth với 3 tháng của quý (để quarter detection hoạt động dù DS = 0)
+  if (mk1) byMonth[mk1] = 0;
+  if (mk2) byMonth[mk2] = 0;
+  if (mk3) byMonth[mk3] = 0;
+
+  for (let i = 1; i < rows.length; i++) {
+    const row    = rows[i];
+    const maTDV  = String(row[0] || '').trim().toUpperCase();
+    const tenTDV = String(row[1] || '').trim();
+    if (!maTDV) continue;
+
+    // Paired:     [2]=T1Tgt [3]=T1DS [4]=T2Tgt [5]=T2DS [6]=T3Tgt [7]=T3DS
+    // Sequential: [2]=T1Tgt [3]=T2Tgt [4]=T3Tgt [5]=T1DS [6]=T2DS [7]=T3DS
+    const t1tgt = cleanNum(row[2]);
+    const ds1   = pairedLayout ? cleanNum(row[3]) : cleanNum(row[5]);
+    const t2tgt = pairedLayout ? cleanNum(row[4]) : cleanNum(row[3]);
+    const ds2   = pairedLayout ? cleanNum(row[5]) : cleanNum(row[6]);
+    const t3tgt = pairedLayout ? cleanNum(row[6]) : cleanNum(row[4]);
+    const ds3   = pairedLayout ? cleanNum(row[7]) : cleanNum(row[7]);
+
+    tdvInfo[maTDV]    = { tenTDV, khuVuc: '', maQLBH: '' };
+    byTdvMonth[maTDV] = {};
+    let totalDs = 0;
+
+    [[mk1, ds1], [mk2, ds2], [mk3, ds3]].forEach(([mk, ds]) => {
+      if (!mk || ds <= 0) return;
+      byTdvMonth[maTDV][mk] = { ds, khDsMap: {}, spDsMap: {} };
+      byMonth[mk] = (byMonth[mk] || 0) + ds;
+      totalDs += ds;
+    });
+
+    byTdv[maTDV] = { ds: totalDs, khDsMap: {}, spDsMap: {} };
+
+    quyTargets.push({
+      maTDV, tenTDV, khuVuc: '', mien: '', qlbhCode: '', doiTuong: 'TDV',
+      dsTongTarget: t1tgt + t2tgt + t3tgt,
+      dpkhTarget: 0, dpmhTarget: 0, isQuyTarget: true,
+      monthTargets: { [mk1]: t1tgt, [mk2]: t2tgt, [mk3]: t3tgt },
+    });
+  }
+
+  return {
+    byTdv, byMaSP: {}, bySPKhSet: {}, byTdvSPKhSet: {},
+    byMonth, byMonthKhMap: {}, byTdvMonth, tdvInfo,
+    khInfoMap: {}, byTdvOrderSet: {}, quyTargets,
+  };
+}
+
 // ─── SP→Nhóm mapping parser ──────────────────────────────────
 function parseSpNhomFile(arrayBuffer) {
   const wb   = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false });
