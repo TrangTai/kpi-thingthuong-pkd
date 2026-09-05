@@ -102,10 +102,10 @@ const CONFIG = {
   // Cấu hình Quý (thay đổi mỗi quý)
   // ----------------------------------------------------------
   QUY_CONFIG: {
-    quyLabel: 'Q2/2026',
-    thang1: 'T04',
-    thang2: 'T05',
-    thang3: 'T06',
+    quyLabel: 'Q3/2026',
+    thang1: 'T07',
+    thang2: 'T08',
+    thang3: 'T09',
   },
 
 };
