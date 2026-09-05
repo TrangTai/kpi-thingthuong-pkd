@@ -76,7 +76,6 @@ function showApp(userDoc) {
 }
 
 function initAdminApp() {
-  document.getElementById('btn-save-cloud').style.display    = 'inline-block';
   document.getElementById('btn-create-accounts').style.display = 'inline-block';
   document.getElementById('btn-create-tpkd').style.display   = 'inline-block';
   document.getElementById('btn-create-qtsl').style.display   = 'inline-block';
@@ -101,87 +100,41 @@ function initAdminApp() {
   loadResultsFromStorage();
   initFormulaPanel();
 
-  fbLoadConfig().then(cfg => { if (cfg) applyConfigFromFirestore(cfg); }).catch(() => {});
 }
 
-async function initQLBHApp(userDoc) {
-  document.getElementById('upload-section').style.display  = 'none';
-  document.getElementById('action-bar').style.display      = 'none';
-  document.getElementById('formula-panel').style.display   = 'none';
-  document.getElementById('cloud-status-bar').style.display = '';
-  document.getElementById('qlbh-upload-section').style.display = '';
-  // Tab nav stays visible so QLBH can access Báo cáo and Theo Miền tabs
-  switchTab('tinh-thuong');
+function initQLBHApp(userDoc) {
+  // Hide admin-only management buttons
+  ['btn-create-accounts','btn-create-tpkd','btn-create-qtsl']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+  // Hide QLBH-specific upload section and cloud status bar
+  const qlbhSec = document.getElementById('qlbh-upload-section');
+  if (qlbhSec) qlbhSec.style.display = 'none';
+  const cloudBar = document.getElementById('cloud-status-bar');
+  if (cloudBar) cloudBar.style.display = 'none';
+  // Hide cloud save buttons
+  ['btn-checkin-save-cloud','btn-khmoi-save-cloud']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
 
-  setupFileInput('input-don-hang-qlbh', 'badge-don-hang-qlbh', 'label-don-hang-qlbh', f => { uploadedFiles.donHangQLBH = f; });
-  document.getElementById('btn-qlbh-calculate')?.addEventListener('click', () => onQLBHCalculate(userDoc));
+  setupFileInput('input-don-hang', 'badge-don-hang', 'label-don-hang', f => { uploadedFiles.donHang = f; });
+  setupFileInput('input-dh-lon',   'badge-dh-lon',   'label-dh-lon',   f => { uploadedFiles.dhLon   = f; onStaticUpload('dhLon',   f, parseDhLon,        SK.dhLon,   'dhLonOrders');   }, false);
+  setupFileInput('input-target',   'badge-target',   'label-target',   f => { uploadedFiles.target  = f; onStaticUpload('target',  f, parseTarget,       SK.target,  'targets');       }, false);
+  setupFileInput('input-dskh',     'badge-dskh',     'label-dskh',     f => { uploadedFiles.dskh    = f; onStaticUpload('dskh',    f, parseDSKHCongTy,   SK.dskh,    'companyKhMap'); }, false);
+  setupFileInput('input-bang-gia', 'badge-bang-gia', 'label-bang-gia', f => { uploadedFiles.bangGia = f; onStaticUpload('bangGia', f, parseBangGia,      SK.bangGia, 'bangGiaMap');   }, false);
+  setupFileInput('input-quy',      'badge-quy',      'label-quy',      f => { uploadedFiles.quy     = f; onStaticUpload('quy',     f, parseQuyData,      SK.quy,     'quyMap');        }, false);
+
+  document.getElementById('btn-calculate').addEventListener('click', onCalculate);
+  document.getElementById('btn-export').addEventListener('click', onExport);
+  document.getElementById('btn-clear').addEventListener('click', onClear);
+  document.getElementById('btn-config').addEventListener('click', toggleFormulaPanel);
   setupCheckInUpload();
   setupKhMoiUpload();
   setupQuarterlyUpload();
 
-  // QLBH should not be able to overwrite shared cloud data
-  const saveCI = document.getElementById('btn-checkin-save-cloud');
-  const saveKM = document.getElementById('btn-khmoi-save-cloud');
-  if (saveCI) saveCI.style.display = 'none';
-  if (saveKM) saveKM.style.display = 'none';
-
-  const statusEl = document.getElementById('cloud-status');
-  try {
-    const [meta, results, quyMap] = await Promise.all([fbLoadMeta(), fbLoadResults(userDoc.maTDV), fbLoadQuyMap()]);
-
-    if (meta) {
-      const ts = meta.savedAt?.toDate?.() || new Date();
-      const fmtDt = new Intl.DateTimeFormat('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
-      if (statusEl) statusEl.innerHTML = `Dữ liệu từ Cloud · Cập nhật lần cuối: <b>${fmtDt.format(ts)}</b> · <b>${meta.label || ''}</b>`;
-    }
-
-    if (!results.length) {
-      document.getElementById('output').innerHTML = '<div style="padding:32px;text-align:center;color:#888;font-size:14px">Chưa có kết quả. Admin cần Tính Thưởng và nhấn Lưu Cloud.</div>';
-      return;
-    }
-
-    results.sort((a, b) => (b.isQLBH ? 1 : 0) - (a.isQLBH ? 1 : 0));
-    lastCalcData = { results, dpkhDetail: [], dpmhDetail: [] };
-    staticData.quyMap = quyMap;
-
-    renderOutput(results, `Nhóm: <b>${userDoc.tenTDV}</b> · <b>${results.length}</b> thành viên`, null);
-    renderPresentation(results);
-    document.getElementById('presentation-wrap').style.display = '';
-    switchTab('tinh-thuong');
-  } catch(err) {
-    if (statusEl) statusEl.textContent = 'Lỗi tải dữ liệu: ' + err.message;
-    console.error(err);
-  }
-}
-
-async function onQLBHCalculate(userDoc) {
-  if (!uploadedFiles.donHangQLBH) { alert('Vui lòng chọn file ĐƠN HÀNG trước.'); return; }
-  const btn = document.getElementById('btn-qlbh-calculate');
-  if (btn) { btn.disabled = true; btn.textContent = 'Đang tính...'; }
-  try {
-    const support      = await fbLoadSupportingData();
-    const targets      = support.targets      || staticData.targets;
-    const companyKhMap = support.companyKhMap || staticData.companyKhMap || {};
-    const bangGiaMap   = support.bangGiaMap   || staticData.bangGiaMap   || {};
-    if (!targets) { alert('Chưa có TARGET từ Cloud. Liên hệ admin.'); return; }
-
-    const donHangOrders = await parseDonHangKinhDoanh(uploadedFiles.donHangQLBH);
-    let allOrders = [...donHangOrders];
-    enrichOrdersWithBangGia(allOrders, bangGiaMap);
-    enrichOrders(allOrders, companyKhMap);
-    const { results } = calculateKPI(allOrders, targets);
-    const filtered = results.filter(r => r.qlbhCode === userDoc.maTDV);
-    filtered.sort((a, b) => (b.isQLBH ? 1 : 0) - (a.isQLBH ? 1 : 0));
-    lastCalcData = { results: filtered, dpkhDetail: [], dpmhDetail: [] };
-    staticData.quyMap = await fbLoadQuyMap();
-    renderOutput(filtered, `Nhóm: <b>${userDoc.tenTDV}</b> · Tính thử từ file ĐƠN HÀNG`, new Date());
-    renderPresentation(filtered);
-    switchTab('tinh-thuong');
-  } catch(err) {
-    alert('Lỗi: ' + err.message); console.error(err);
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🔄 Tính thử'; }
-  }
+  loadConfigFromStorage();
+  loadStaticFromStorage();
+  loadResultsFromStorage();
+  initFormulaPanel();
+  switchTab('tinh-thuong');
 }
 
 // ─── TPKD: xem tất cả, không lọc theo nhóm ─────────────────
@@ -519,12 +472,27 @@ function setupQuarterlyUpload() {
     inpCurrent.addEventListener('change', e => {
       const file = e.target.files[0]; if (!file) return;
       document.getElementById('label-quy-current').textContent = file.name;
-      _readQuyFile(file, parsed => {
-        _qDataCurrent = parsed;
-        const n = parsed ? Object.keys(parsed.byTdv || {}).length : 0;
-        _updateQuyStatus();
-        if (!n) alert('Không đọc được dữ liệu. Kiểm tra format file (cột J = Mã TDV, cột I = Tổng Tiền).');
-      }, 'Lỗi đọc DOANHSOQUY');
+      const reader = new FileReader();
+      reader.onload = ev => {
+        try {
+          const quyParsed = parseQuyDataFile(ev.target.result);
+          if (quyParsed) {
+            // Format tóm tắt: luôn update _qTargets; DS lấy từ file đơn hàng riêng
+            if (quyParsed.quyTargets?.length) _qTargets = quyParsed.quyTargets;
+            // Chỉ set _qDataCurrent nếu file có DS thực (col DS không trống)
+            const hasDs = Object.values(quyParsed.byMonth || {}).some(v => v > 0);
+            if (hasDs) _qDataCurrent = quyParsed;
+          } else {
+            const parsed = parseQuyOrderFileCK(ev.target.result);
+            _qDataCurrent = parsed;
+            if (parsed?.quyTargets?.length && !_qTargets) _qTargets = parsed.quyTargets;
+          }
+          _updateQuyStatus();
+          const n = _qDataCurrent ? Object.keys(_qDataCurrent.byTdv || {}).length : 0;
+          if (!n && !_qTargets) alert('Không đọc được dữ liệu. Kiểm tra format file (Mã TDV ở cột 1, Target ở cột 3-5 hoặc cột J = Mã TDV, cột I = Tổng Tiền).');
+        } catch(err) { alert('Lỗi đọc file: ' + err.message); }
+      };
+      reader.readAsArrayBuffer(file);
     });
   }
 
@@ -648,7 +616,7 @@ async function onQuarterlyCalculate() {
       if (t) dskhByTdv[t] = (dskhByTdv[t] || 0) + 1;
     });
 
-    const targets = _qTargets || staticData.targets || [];
+    const targets = _qTargets || qData?.quyTargets || staticData.targets || [];
     const result = calculateQuarterlyReport(qData, currentOrders, _qSpNhom, targets, dskhByTdv, _qDataCK, _qHopDong, _qHopDongCK);
     out.innerHTML = renderQuarterlyReport(result);
     setTimeout(() => initQuyCharts(), 80);
@@ -890,12 +858,16 @@ function exportFileData(key) {
 function downloadQuyTemplate() {
   const qc = CONFIG.QUY_CONFIG;
   const wb = XLSX.utils.book_new();
-  const hdrs = ['Mã TDV','Tên TDV', qc.thang1+' Target', qc.thang2+' Target', qc.thang1+' Thực (DS T+CT)', qc.thang2+' Thực (DS T+CT)'];
+  const hdrs = [
+    'Mã TDV', 'Tên TDV',
+    qc.thang1 + ' Target', qc.thang2 + ' Target',
+    qc.thang1 + ' Thực (DS T+CT)', qc.thang2 + ' Thực (DS T+CT)',
+  ];
   const ws = XLSX.utils.aoa_to_sheet([hdrs]);
-  ws['!cols'] = [10,22,16,16,22,22].map(w=>({wch:w}));
-  ws['!freeze'] = { xSplit:0, ySplit:1, topLeftCell:'A2', activePane:'bottomLeft' };
+  ws['!cols'] = [10, 22, 16, 16, 22, 22].map(w => ({ wch: w }));
+  ws['!freeze'] = { xSplit: 0, ySplit: 1, topLeftCell: 'A2', activePane: 'bottomLeft' };
   XLSX.utils.book_append_sheet(wb, ws, 'Quý');
-  XLSX.writeFile(wb, `MAU_QUY_${qc.quyLabel.replace('/','_')}.xlsx`);
+  XLSX.writeFile(wb, `MAU_QUY_${qc.quyLabel.replace('/', '_')}.xlsx`);
 }
 
 // ─── Load static from localStorage ──────────────────────────
